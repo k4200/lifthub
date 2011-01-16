@@ -1,4 +1,4 @@
-package net.liftweb {
+package net.lifthub {
 package lib {
 
 import net.liftweb._

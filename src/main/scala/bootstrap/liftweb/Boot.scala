@@ -10,7 +10,7 @@ import sitemap._
 import Loc._
 import mapper._
 
-import net.liftweb.model._
+import net.lifthub.model._
 
 
 /**
