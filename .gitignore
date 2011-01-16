@@ -1,0 +1,8 @@
+lib_managed
+target
+src_managed/
+project/boot/
+lift_proto.db.lock.db
+lift_proto.db.h2.db
+lift_proto.db.trace.db
+sbt*
