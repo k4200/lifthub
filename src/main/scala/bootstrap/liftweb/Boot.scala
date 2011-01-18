@@ -44,6 +44,12 @@ class Boot {
     def sitemap = SiteMap(
       Menu.i("Home") / "index" >> User.AddUserMenusAfter, // the simple way to declare a menu
 
+      //KK
+      //TODO Make these sub menus under "Manage Project"
+      //This is also used to modify an existing project.
+      Menu.i("Create Project") / "project",
+      Menu.i("List Projects") / "listprojects",
+
       // more complex because this menu allows anything in the
       // /static path to be visible
       Menu(Loc("Static", Link(List("static"), true, "/static/index"), 
