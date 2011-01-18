@@ -14,7 +14,7 @@ object User extends User with MetaMegaProtoUser[User] {
 			       <lift:bind /></lift:surround>)
   // define the order fields will appear in forms and output
   override def fieldOrder = List(id, firstName, lastName, email,
-  locale, timezone, password, textArea)
+  locale, timezone, password, sshKey)
 
   // comment this line out to require email validations
   //override def skipEmailValidation = true
@@ -33,11 +33,18 @@ object User extends User with MetaMegaProtoUser[User] {
 class User extends MegaProtoUser[User] {
   def getSingleton = User // what's the "meta" server
 
-  // define an additional field for a personal essay
-  object textArea extends MappedTextarea(this, 2048) {
+  //Just for testing when I was answering the question on the URL below.
+  // http://stackoverflow.com/questions/4210169/scala-lift-remove-locale-and-time-zone-from-sign-up/4715542#4715542
+//   import _root_.scala.xml.Text
+//   override lazy val locale = new MyLocale(this) {
+//     override val fieldId = Some(Text(null))
+//   }
+
+  object sshKey extends MappedTextarea(this, 1024) {
+    override def dbColumnName = "ssh_key"
     override def textareaRows  = 10
     override def textareaCols = 50
-    override def displayName = "Personal Essay"
+    override def displayName = "SSH public key"
   }
 }
 
