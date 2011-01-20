@@ -10,6 +10,11 @@ class LiftProject(info: ProjectInfo) extends DefaultWebProject(info) {
   // this line
   // override def scanDirectories = Nil
 
+
+  // Add repositories here
+  val jGitRepo = "JGit" at "http://download.eclipse.org/jgit/maven"
+  //val eGItRepo = "EGit" at "http://download.eclipse.org/egit/updates"
+
   override def libraryDependencies = Set(
     "net.liftweb" %% "lift-webkit" % liftVersion % "compile->default",
     "net.liftweb" %% "lift-mapper" % liftVersion % "compile->default",
@@ -19,7 +24,8 @@ class LiftProject(info: ProjectInfo) extends DefaultWebProject(info) {
     "org.scala-tools.testing" %% "specs" % "1.6.6" % "test->default",
     "org.mockito" % "mockito-core" % "1.8.5" % "test->default",
     "mysql" % "mysql-connector-java" % "5.1.14", //MySQL
-    "commons-io" % "commons-io" % "2.0.1"
+    "commons-io" % "commons-io" % "2.0.1",
+    "org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1"
     //"com.h2database" % "h2" % "1.2.138"
   ) ++ super.libraryDependencies
 }

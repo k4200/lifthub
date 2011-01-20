@@ -49,8 +49,9 @@ KtNhHcs=
 
   "ProjectHelper" should {
     "copy template" in {
-      ProjectHelper.copyTemplate(pi) mustEqual
-	"cp /home/lifthub/projecttemplates/lift_2.2_sbt/lift_mvc /home/lifthub/userprojects/foo"
+       ProjectHelper.copyTemplate(pi) mustBe true
+//       ProjectHelper.copyTemplate(pi) mustEqual
+// 	"cp /home/lifthub/projecttemplates/lift_2.2_sbt/lift_mvc /home/lifthub/userprojects/foo"
     }
     
   }

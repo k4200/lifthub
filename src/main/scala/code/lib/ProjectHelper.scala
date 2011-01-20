@@ -104,9 +104,14 @@ object ProjectHelper {
   }
 
   //TODO shoud be private --------
-  def copyTemplate(projectInfo: ProjectInfo) = {
-    //TODO stub
-    "cp " + projectInfo.templatePath + " " + projectInfo.path
+  def copyTemplate(projectInfo: ProjectInfo): Boolean = {
+    import org.apache.commons.io.FileUtils
+    try {
+      FileUtils.copyDirectory(projectInfo.templatePath, projectInfo.path)
+      true
+    } catch {
+      case e: java.io.IOException => false
+    }
   }
 
   //TODO
