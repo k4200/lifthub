@@ -5,6 +5,14 @@ import net.lifthub.model.User
 
 import FileUtils._
 
+// JGit
+import org.eclipse.jgit._
+import lib._
+import api.Git
+import storage.file.{FileRepository, FileRepositoryBuilder}
+
+import java.io._
+
 
 /**
  *
@@ -30,6 +38,8 @@ case class ProjectInfo (name: String, templateType: TemplateType, version: Strin
   def templatePath: String = ProjectInfo.templateBasePath + "/lift_" +
     version + "_sbt/" + templateType.dirName
   def path: String = ProjectInfo.projectBasePath + "/" + name
+
+  val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
 }
 object ProjectInfo {
   //Paths
@@ -38,18 +48,34 @@ object ProjectInfo {
   val projectBasePath = basePath + "/userprojects"
 }
 
-
 // ------------------------------------------------
+case class Path(base: String, relativePath: String)
+extends File (new File(base), relativePath) {
+  // just to be consistent
+  def getRelativePath = relativePath
+  def + (toAppend: String): Path = 
+    Path(base, relativePath + File.separator + toAppend)
+}
 
 /**
- * Utilities that handles gitosis
+ * Utilities that handle gitosis
  */
 object GitosisHelper {
-  import java.io._
-  val gitosisAdminPath = ProjectInfo.basePath + "/gitosis-admin"
-  val keydirPath = gitosisAdminPath + "/keydir"
   val adminEmail = "lifthub@localhost.localdomain"
-  lazy val conf = new File(gitosisAdminPath + "/gitosis.conf")
+
+  val gitosisAdminPath = ProjectInfo.basePath + "/gitosis-admin"
+  val keydirName = "keydir"
+  val keydir = Path(gitosisAdminPath, keydirName)
+  lazy val conf = Path(gitosisAdminPath, "gitosis.conf")
+
+  def keyFileName(user: User): String = user.email + ".pub"
+  def keyFile(user: User): Path = keydir + keyFileName(user)
+
+  // Initialize RepositoryBuilder
+  lazy val builder = new FileRepositoryBuilder()
+  lazy val gitosisRepo = 
+    builder.setGitDir(gitosisAdminPath + "/" + Constants.DOT_GIT)
+    .readEnvironment().findGitDir().build()
 
   /**
    * Adds an entry to gitosis.conf
@@ -75,12 +101,33 @@ object GitosisHelper {
   }
 
   def createSshKey(user: User): Boolean = {
-    val keyFilePath = keydirPath + "/" + user.email + ".pub"
-    FileUtils.printToFile(new File(keyFilePath))(writer => {
+    FileUtils.printToFile(keyFile(user))(writer => {
       writer.write(user.sshKey)
     })
   }
 
+  def addSshKeyToGit(user: User): Boolean = {
+    val git = new Git(gitosisRepo)
+    val dirCache = git.add().addFilepattern(keyFile(user).relativePath).call()
+    //val dirCache = git.add().addFilepattern("fail").call()
+//     if (dirCache.lock && dirCache.commit) {
+//       dirCache.unlock
+//       true
+//     } else {
+//       false
+//     }
+    true
+  }
+
+  /**
+   *
+   */
+  def commitAndPush(message: String): Boolean = {
+    val git = new Git(gitosisRepo)
+    git.commit().setMessage(message).call()
+    git.push().call()
+    true
+  }
 }
 
 // ------------------------------------------------
@@ -88,19 +135,17 @@ object GitosisHelper {
 /**
  */
 object ProjectHelper {
-  val git = "/usr/bin/git"
-
   def createProject(projectInfo: ProjectInfo, user: User) = {
     addUserToGitosis(projectInfo, user)
     copyTemplate(projectInfo)
+    commitAndPushProject(projectInfo)
   }
 
   def addUserToGitosis(projectInfo: ProjectInfo, user: User): Boolean = {
     GitosisHelper.addEntry2Conf(projectInfo, user) &&
-    GitosisHelper.createSshKey(user)
-    //TODO git add keyfile
-    //TODO git commit
-    //TODO git push
+    GitosisHelper.createSshKey(user) &&
+    GitosisHelper.addSshKeyToGit(user) &&
+    GitosisHelper.commitAndPush("Added a user: " + user.email)
   }
 
   //TODO shoud be private --------
@@ -114,10 +159,33 @@ object ProjectHelper {
     }
   }
 
-  //TODO
-  def commitAndPushProject(projectInfo: ProjectInfo) = {
-    //TODO git commit -a
-    //TODO git push
+  def commitAndPushProject(projectInfo: ProjectInfo): Boolean = {
+    val builder = new FileRepositoryBuilder()
+    val projectRepo = 
+      builder.setGitDir(projectInfo.path + "/" + Constants.DOT_GIT)
+      .readEnvironment().findGitDir().build()
+    
+    try {
+      val git = Git.init.setDirectory(new File(projectInfo.path)).call()
+      git.add().addFilepattern(".").call()
+      git.commit().setMessage("New project").call()
+      // so far so good
+
+//       val config = new Config
+//       val remoteConfig = new RemoteConfig(config, "origin")
+//       remoteConfig.addPushURI(new URIsh(projectInfo.gitRepoRemote))
+
+      //projectInfo.gitRepoRemote
+      // setRemote -> origin
+      //git.push().setRemote().call()
+      git.push().setRemote(projectInfo.gitRepoRemote).call()
+    } catch {
+      case e: Exception  =>
+        e.printStackTrace
+        println(e.getCause)
+        return false
+    }
+    true
   }
 
 }

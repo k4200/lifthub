@@ -34,6 +34,7 @@ KtNhHcs=
     "contain correct paths" in {
       pi.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_mvc"
       pi.path mustEqual "/home/lifthub/userprojects/foo"
+      pi.gitRepoRemote mustEqual "gitosis@lifthub.net:foo.git"
     }
   }
 
@@ -53,13 +54,24 @@ KtNhHcs=
 //       ProjectHelper.copyTemplate(pi) mustEqual
 // 	"cp /home/lifthub/projecttemplates/lift_2.2_sbt/lift_mvc /home/lifthub/userprojects/foo"
     }
-    
+    "add a project to git" in {
+      //
+      ProjectHelper.commitAndPushProject(pi) mustBe true
+      true mustBe true
+    }
   }
   // -------------
   "GitosisHelper" should {
     "provide the conf file." in {
       GitosisHelper.conf.getAbsolutePath mustEqual "/home/lifthub/gitosis-admin/gitosis.conf"
+      GitosisHelper.conf.getRelativePath mustEqual "gitosis.conf"
       GitosisHelper.conf.exists mustBe true
+    }
+    "provide a key file of the user" in {
+      GitosisHelper.keyFile(user).relativePath mustEqual
+	"keydir/kashima@shibuya.scala-users.org.pub"
+      GitosisHelper.keyFile(user).getAbsolutePath mustEqual
+	"/home/lifthub/gitosis-admin/keydir/kashima@shibuya.scala-users.org.pub"
     }
     "generate an entry string" in {
       GitosisHelper.generateConfEntryString(pi, user) mustEqual
@@ -73,10 +85,13 @@ writable = foo"""
       val after = GitosisHelper.conf.length
       before must_!= after
     }
-    "write a user's key to a file" in {
-      GitosisHelper.createSshKey(user) mustBe true
-    }
-
+//     "write a user's key to a file" in {
+//       GitosisHelper.createSshKey(user) mustBe true
+//     }
+    
+//     "add user's key to git" in {
+//       GitosisHelper.addSshKeyToGit(user) mustBe true
+//     }
   }
 
 }
