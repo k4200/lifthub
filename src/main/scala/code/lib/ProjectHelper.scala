@@ -10,6 +10,7 @@ import org.eclipse.jgit._
 import lib._
 import api.Git
 import storage.file.{FileRepository, FileRepositoryBuilder}
+import transport.{Transport, RefSpec, RemoteConfig}
 
 import java.io._
 
@@ -39,7 +40,9 @@ case class ProjectInfo (name: String, templateType: TemplateType, version: Strin
     version + "_sbt/" + templateType.dirName
   def path: String = ProjectInfo.projectBasePath + "/" + name
 
-  val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
+  //TODO
+  //val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
+  val gitRepoRemote: String = "gitosis@www.lifthub.net:" + name + ".git"
 }
 object ProjectInfo {
   //Paths
@@ -59,6 +62,7 @@ extends File (new File(base), relativePath) {
 
 /**
  * Utilities that handle gitosis
+ * TODO non thread safe
  */
 object GitosisHelper {
   val adminEmail = "lifthub@localhost.localdomain"
@@ -67,6 +71,8 @@ object GitosisHelper {
   val keydirName = "keydir"
   val keydir = Path(gitosisAdminPath, keydirName)
   lazy val conf = Path(gitosisAdminPath, "gitosis.conf")
+  val gitAdminRepoRemote = "gitosis@localhost:gitosis-admin.git"
+  //val gitAdminRepoRemote = "gitosis@localhost:gitosis-admin.git"
 
   def keyFileName(user: User): String = user.email + ".pub"
   def keyFile(user: User): Path = keydir + keyFileName(user)
@@ -93,11 +99,30 @@ object GitosisHelper {
   def generateConfEntryString(projectInfo: ProjectInfo, user: User): String = {
     // group -> a group of people.
     // writable -> the name of the project to which this group can write.
+    // gitweb = yes -> the project appears in the list.
     """[group %s]
       |members = %s %s
       |writable = %s"""
-      .stripMargin.format(projectInfo.name, adminEmail,
-                          user.email, projectInfo.name)
+      .stripMargin.format(projectInfo.name,
+                          adminEmail, user.email, projectInfo.name)
+//     """[group %s]
+//       |members = %s %s
+//       |writable = %s
+//       |
+//       |[repo %s]
+//       |owner = %s"""
+//       .stripMargin.format(projectInfo.name,
+//                           adminEmail, user.email, projectInfo.name,
+//                           projectInfo.name, user.email)
+  }
+
+  /**
+   * Adds the conf file to the list of the files to be committed.
+   */
+  def gitAddConf(): Boolean = {
+    val git = new Git(gitosisRepo)
+    git.add().addFilepattern(conf.relativePath).call()
+    true
   }
 
   def createSshKey(user: User): Boolean = {
@@ -106,27 +131,59 @@ object GitosisHelper {
     })
   }
 
-  def addSshKeyToGit(user: User): Boolean = {
+  def gitAddSshKey(user: User): Boolean = {
     val git = new Git(gitosisRepo)
     val dirCache = git.add().addFilepattern(keyFile(user).relativePath).call()
     //val dirCache = git.add().addFilepattern("fail").call()
-//     if (dirCache.lock && dirCache.commit) {
-//       dirCache.unlock
-//       true
-//     } else {
-//       false
-//     }
     true
   }
 
   /**
    *
    */
-  def commitAndPush(message: String): Boolean = {
+  def commitAndPush(message: String, dryRun: Boolean = false): Boolean = {
     val git = new Git(gitosisRepo)
     git.commit().setMessage(message).call()
-    git.push().call()
+
+    val refSpec = new RefSpec("refs/heads/master")
+    git.push().setRefSpecs(refSpec).setRemote(gitAdminRepoRemote).setDryRun(dryRun).call()
     true
+  }
+
+  // for debug
+  private def dumpConfig(config: Config, remote: String, name: String) {
+    println("----" + name)
+    config.getStringList("remote", remote, name).foreach(println)
+  }
+
+  // for debug
+  private def pushTest {
+    try {
+      //val remote = gitAdminRepoRemote
+      val remote = "origin"
+      val config = gitosisRepo.getConfig
+      val remoteConfig = new RemoteConfig(config, remote)
+      //val transports = Transport.openAll(gitosisRepo, remote, Transport.Operation.PUSH);
+      val transport = Transport.open(gitosisRepo, remote)
+
+      println("Repo ->" + gitosisRepo)
+      println("remote ->" + remote)
+      println(gitosisRepo.getConfig)
+      dumpConfig(config, remote, "url")
+      dumpConfig(config, remote, "pushurl")
+      dumpConfig(config, remote, "fetch")
+      dumpConfig(config, remote, "push")
+      println(remoteConfig.getURIs().isEmpty() && remoteConfig.getPushURIs().isEmpty())
+      println(transport)
+
+      val refSpec = new RefSpec("refs/heads/master")
+      val git = new Git(gitosisRepo)
+      val dryRun = false
+      git.push().setRefSpecs(refSpec).setDryRun(dryRun).setRemote(gitAdminRepoRemote).call()
+      //git.push().setRefSpecs(refSpec).setDryRun(dryRun).setRemote(remote).call()
+    } catch {
+      case e: Exception => e.getCause.printStackTrace
+    }
   }
 }
 
@@ -135,6 +192,19 @@ object GitosisHelper {
 /**
  */
 object ProjectHelper {
+
+  // for debug
+  def main(args: Array[String]) {
+    val projectInfo = ProjectInfo("foo", TemplateType.Mvc, "2.2")
+    val user = new User
+    user.email.set("kashima@shibuya.scala-users.org")
+    user.sshKey.set("ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAIEAjz+vWAw0gf7PGUBkVO12HEuDzId08c/uv2kGQmhA7GRZ+Aw8SMhVAua3Vy7Ob21AhWkPfE/1/oiVTWTZSUhuoGtcxcP+0lL13GB5DHABr6eWH9CE11qxBAYs/wk+c7xMMj3Igh2MZvTydVr1useq4f1npiJ8+bzCMJiSKtNhHcs= kashima@shibuya.scala-users.org")
+    
+    addUserToGitosis(projectInfo, user)
+    copyTemplate(projectInfo)
+    commitAndPushProject(projectInfo)
+  }
+
   def createProject(projectInfo: ProjectInfo, user: User) = {
     addUserToGitosis(projectInfo, user)
     copyTemplate(projectInfo)
@@ -143,8 +213,9 @@ object ProjectHelper {
 
   def addUserToGitosis(projectInfo: ProjectInfo, user: User): Boolean = {
     GitosisHelper.addEntry2Conf(projectInfo, user) &&
+    GitosisHelper.gitAddConf() &&
     GitosisHelper.createSshKey(user) &&
-    GitosisHelper.addSshKeyToGit(user) &&
+    GitosisHelper.gitAddSshKey(user) &&
     GitosisHelper.commitAndPush("Added a user: " + user.email)
   }
 
@@ -159,7 +230,8 @@ object ProjectHelper {
     }
   }
 
-  def commitAndPushProject(projectInfo: ProjectInfo): Boolean = {
+  def commitAndPushProject(projectInfo: ProjectInfo,
+                           dryRun: Boolean = false): Boolean = {
     val builder = new FileRepositoryBuilder()
     val projectRepo = 
       builder.setGitDir(projectInfo.path + "/" + Constants.DOT_GIT)
@@ -169,16 +241,9 @@ object ProjectHelper {
       val git = Git.init.setDirectory(new File(projectInfo.path)).call()
       git.add().addFilepattern(".").call()
       git.commit().setMessage("New project").call()
-      // so far so good
 
-//       val config = new Config
-//       val remoteConfig = new RemoteConfig(config, "origin")
-//       remoteConfig.addPushURI(new URIsh(projectInfo.gitRepoRemote))
-
-      //projectInfo.gitRepoRemote
-      // setRemote -> origin
-      //git.push().setRemote().call()
-      git.push().setRemote(projectInfo.gitRepoRemote).call()
+      val refSpec = new RefSpec("refs/heads/master")
+      git.push().setRefSpecs(refSpec).setDryRun(dryRun).setRemote(projectInfo.gitRepoRemote).call()
     } catch {
       case e: Exception  =>
         e.printStackTrace
