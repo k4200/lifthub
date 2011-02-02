@@ -18,23 +18,46 @@ import java.io._
 /**
  *
  */
-case class TemplateType(name: String) {
-  val dirName = "lift_" + name.toLowerCase
+// case class TemplateType(name: String) {
+//   val dirName = "lift_" + name.toLowerCase
+// }
+// //implicit def str2templateType(s: String) = TemplateType(s)
+// case object TemplateType {
+//   val Basic = TemplateType("Basic")
+//   val Blank = TemplateType("Blank")
+//   val Mvc   = TemplateType("MVC")
+//   val Xhtml = TemplateType("XHTML")
+//   val templateTypes = List(Basic, Blank, Mvc, Xhtml)
+// }
+
+object TemplateType extends Enumeration {
+  val Basic = TemplateTypeVal("Basic")
+  val Blank = TemplateTypeVal("Blank")
+  val Mvc   = TemplateTypeVal("MVC")
+  val Xhtml = TemplateTypeVal("XHTML")
+  case class TemplateTypeVal(name: String) extends Val(name) {
+    val dirName = "lift_" + name.toLowerCase
+  }
+  implicit def valueToTemplateTypeValue(v: Value): TemplateTypeVal
+    = v.asInstanceOf[TemplateTypeVal]
 }
-//implicit def str2templateType(s: String) = TemplateType(s)
-case object TemplateType {
-  val Basic = TemplateType("Basic")
-  val Blank = TemplateType("Blank")
-  val Mvc   = TemplateType("MVC")
-  val Xhtml = TemplateType("XHTML")
-  val templateTypes = List(Basic, Blank, Mvc, Xhtml)
+
+object DbType extends Enumeration {
+  val MySql = DbTypeVal("MySQL")
+  //val PostgreSql = DbTypeVal("PostgreSQL")
+
+  case class DbTypeVal(name: String) extends Val
+  implicit def valueToDbTypeValue(v: Value): DbTypeVal
+    = v.asInstanceOf[DbTypeVal]
+
 }
+
 
 /**
  * Project information
  * TODO Add databaseType: MySQL, PostgreSQL etc.
  */
-case class ProjectInfo (name: String, templateType: TemplateType, version: String) {
+case class ProjectInfo (name: String, templateType: TemplateType.Value, version: String) {
   //import ProjectInfo._
   def templatePath: String = ProjectInfo.templateBasePath + "/lift_" +
     version + "_sbt/" + templateType.dirName

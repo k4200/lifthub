@@ -33,31 +33,23 @@ trait UserEditableKeyedMapper[KeyType, OwnerType <: KeyedMapper[KeyType, OwnerTy
 //extends LongKeyedMapper[OwnerType] {
 extends KeyedMapper[KeyType, OwnerType] {
   self: OwnerType =>
-  //type UserType = ProtoUser[GenProtoUser]
 
-  //import net.lifthub.model.User
-  //type UserType = MegaProtoUser[User]
-  //type UserType = MetaMegaProtoUser[User]
-  type UserType <: KeyedMapper[Long,UserType]
   val userObject: GenProtoUser
-  //def userMeta: KeyedMetaMapper[Long, GenProtoUser] = userObject.asInstanceOf[KeyedMetaMapper[Long, GenProtoUser]]
-  def userMeta: KeyedMetaMapper[Long, UserType]
-  //def userMeta: KeyedMetaMapper[Long, GenProtoUser]
 
-  //ProtoUser[GenProtoUser]
-  lazy val user: MappedLongForeignKey[OwnerType, KeyedMetaMapper[Long, UserType]]
-  //lazy val user: MappedLongForeignKey[OwnerType, KeyedMetaMapper[Long, GenProtoUser]]
-    = new MyUserField(this, userMeta)
-  //lazy val user: MappedLongForeignKey[OwnerType, ProtoUser[GenProtoUser]]
-  //  = new MyUserField(this, userObject.asInstanceOf[KeyedMetaMapper[Long, GenProtoUser]])
 
-  //protected class MyUserField[T<:Mapper[T],O<:KeyedMapper[Long, O]](obj: OwnerType, _foreignMeta: KeyedMetaMapper[Long, UserType]) 
-  protected class MyUserField[OwnerType, UserType](obj: OwnerType, _foreignMeta: KeyedMetaMapper[Long, UserType]) 
-            extends MappedLongForeignKey(obj, _foreignMeta)
+//   def userMeta: KeyedMetaMapper[Long, UserType] = userObject.asInstanceOf[KeyedMetaMapper[Long, UserType]]
+//   lazy val user: MappedLongForeignKey[OwnerType, KeyedMetaMapper[Long, UserType]]
+//     = new MyUserField(this, userMeta)
+//   protected class MyUserField[OwnerType, UserType](obj: OwnerType, _foreignMeta: KeyedMetaMapper[Long, UserType]) 
+//             extends MappedLongForeignKey(obj, _foreignMeta)
 
 
   lazy val userId: MappedLong[OwnerType] = new MyUserId(this)
-  protected class MyUserId(obj: OwnerType) extends MappedLong(obj)
+  protected class MyUserId(obj: OwnerType) extends MappedLong(obj) {
+    override def dbIndexed_? = true
+    override def dbDisplay_? = false
+
+  }
   //This doesn't compile.
   //object userId extends MappedLong(this)
 
