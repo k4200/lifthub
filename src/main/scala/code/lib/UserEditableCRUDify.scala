@@ -27,6 +27,15 @@ extends CRUDify [KeyType, CrudType] {
       case _ =>  S.redirectTo("/user_mgt/login")
     }
   }
+
+  val loggedIn_? = If(() => self.userObject.loggedIn_? ,
+                      () => RedirectResponse("/user_mgt/login"))
+
+  override def showAllMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
+  override def viewMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?)
+  override def createMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
+  override def editMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
+  override def deleteMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
 }
 
 trait UserEditableKeyedMapper[KeyType, OwnerType <: KeyedMapper[KeyType, OwnerType]]

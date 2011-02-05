@@ -3,6 +3,10 @@ package lib {
 
 import org.specs._
 
+import net.lifthub.model.Project
+import net.lifthub.model.DbType
+
+
 object ProjectHelperSpec extends Specification {
   val pi = ProjectInfo("foo", TemplateType.Mvc, "2.2")
   import net.lifthub.model.User
@@ -27,6 +31,7 @@ object ProjectHelperSpec extends Specification {
     }
   }
 
+  //TODO move
   "DbType" should {
     "foo" in {
       DbType.MySql.name mustEqual "MySQL"
@@ -46,6 +51,12 @@ object ProjectHelperSpec extends Specification {
       pi.path mustEqual "/home/lifthub/userprojects/foo"
       //pi.gitRepoRemote mustEqual "gitosis@lifthub.net:foo.git"
       pi.gitRepoRemote mustEqual "gitosis@www.lifthub.net:foo.git"
+    }
+    "be instanciated out of Project" in {
+      val project = Project.create
+      project.liftVersion.set("2.2")
+      project.templateType.set(TemplateType.Xhtml)
+      val pi2 = ProjectInfo(project)
     }
   }
 

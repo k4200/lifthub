@@ -15,10 +15,14 @@ with UserEditableCRUDify[Long, Project]
   override def dbTableName = "projects"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
+  override def beforeSave = List(project =>  {
+    //project.
+  })
+
   override def afterSave = List(project =>  {
     User.find(By(User.id, project.userId)) match {
       case Full(user) => 
-        val projectInfo = ProjectInfo("", TemplateType.Mvc, "2.2")
+        val projectInfo = ProjectInfo(project)
         ProjectHelper.createProject(projectInfo, user)
       case _ => println("error...")
     }
@@ -38,20 +42,31 @@ with UserEditableKeyedMapper[Long, Project]
     override def validations = valUnique(S.??("unique.project.name")) _ :: super.validations
   }
 
-  //import net.lifthub.lib.TemplateType
-  //lazy val liftType = new MyLiftType
-  //protected class MyLiftType extends MappedEnum(this, TemplateType) {
-  object liftType extends MappedEnum[Project, TemplateType.type](this, TemplateType) {
-  //object liftType extends MappedInt(this) {
-    override def dbColumnName = "lift_type"
+  object templateType extends MappedEnum[Project, TemplateType.type](this, TemplateType) {
+    override def dbColumnName = "lift_template_type"
   }
 
   object liftVersion extends MappedString(this, 10) {
     override def dbColumnName = "lift_version"
   }
-  object databaseType extends MappedInt(this) {
-    override def dbColumnName = "database_type"
+
+  object database extends MappedLongForeignKey(this, UserDatabase) {
+    //TODO should be done automatically.
+    override def validSelectValues = Full(
+      (0L, "Not Selected") ::
+      (User.currentUser match {
+	case Full(user) =>
+	  UserDatabase.findAll(By(UserDatabase.userId, user.id)).map {
+	    x => (x.id.is, x.databaseType.is + ":" + x.name.is)
+         }
+	case _ => Nil
+      })
+    )
   }
+
+//   object databaseType extends MappedEnum[Project, DbType.type](this, DbType) {
+//     override def dbColumnName = "database_type"
+//   }
 }
 
 

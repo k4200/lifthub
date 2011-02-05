@@ -18,18 +18,6 @@ import java.io._
 /**
  *
  */
-// case class TemplateType(name: String) {
-//   val dirName = "lift_" + name.toLowerCase
-// }
-// //implicit def str2templateType(s: String) = TemplateType(s)
-// case object TemplateType {
-//   val Basic = TemplateType("Basic")
-//   val Blank = TemplateType("Blank")
-//   val Mvc   = TemplateType("MVC")
-//   val Xhtml = TemplateType("XHTML")
-//   val templateTypes = List(Basic, Blank, Mvc, Xhtml)
-// }
-
 object TemplateType extends Enumeration {
   val Basic = TemplateTypeVal("Basic")
   val Blank = TemplateTypeVal("Blank")
@@ -40,32 +28,12 @@ object TemplateType extends Enumeration {
   }
   implicit def valueToTemplateTypeValue(v: Value): TemplateTypeVal
     = v.asInstanceOf[TemplateTypeVal]
-
-//   val Basic = Val("Basic")
-//   val Blank = Val("Blank")
-//   val Mvc   = Val("MVC")
-//   val Xhtml = Val("XHTML")
-//  protected def Value(name: String): Value = new Val(name)
-//   case class Val(name: String) extends super.Val(name) {
-//     val dirName = "lift_" + name.toLowerCase
-//   }
-//   implicit def superValueToThisValue(v: Value): Val
-//     = v.asInstanceOf[Val]
-}
-
-object DbType extends Enumeration {
-  val MySql = DbTypeVal("MySQL")
-  //val PostgreSql = DbTypeVal("PostgreSQL")
-
-  case class DbTypeVal(name: String) extends Val
-  implicit def valueToDbTypeValue(v: Value): DbTypeVal
-    = v.asInstanceOf[DbTypeVal]
-
 }
 
 /**
  * Project information
  * TODO Add databaseType: MySQL, PostgreSQL etc.
+ * TODO Merge this into Project.
  */
 case class ProjectInfo (name: String, templateType: TemplateType.Value, version: String) {
   //import ProjectInfo._
@@ -84,8 +52,8 @@ object ProjectInfo {
   val projectBasePath = basePath + "/userprojects"
 
   import net.lifthub.model.Project
-  def apply(project: Project) {
-    this(project.name, project.liftType.is, "2.2")
+  def apply(project: Project): ProjectInfo = {
+    this(project.name, project.templateType.is, "2.2")
   }
 }
 

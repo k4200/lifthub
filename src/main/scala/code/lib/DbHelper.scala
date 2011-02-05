@@ -78,6 +78,9 @@ object MySqlHelper extends DbHelper(MySqlDriver) {
     }
   }
 
+  /**
+   * @return Full(message) if success, otherwise Failure
+   */
   def dropDatabase(name: String, owner: DbUser, host: String = "localhost"): Box[String] = {
     for {
       safeName <- checkDbName(name)

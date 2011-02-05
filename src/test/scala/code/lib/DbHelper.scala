@@ -23,9 +23,10 @@ object DbHelperSpec extends Specification {
   }
 
   "MySqlHelper" should {
+    shareVariables()
+    // This makes the following code called only once, hopefully!
     val boot = new Boot
     boot.boot
-    //init
 
     "return the correct driver." in {
       MySqlHelper.getDriverType mustEqual MySqlDriver
