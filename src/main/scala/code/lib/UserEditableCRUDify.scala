@@ -36,6 +36,7 @@ extends KeyedMapper[KeyType, OwnerType] {
 
   val userObject: GenProtoUser
 
+//   type UserType
 
 //   def userMeta: KeyedMetaMapper[Long, UserType] = userObject.asInstanceOf[KeyedMetaMapper[Long, UserType]]
 //   lazy val user: MappedLongForeignKey[OwnerType, KeyedMetaMapper[Long, UserType]]

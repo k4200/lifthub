@@ -3,6 +3,7 @@ package lib {
 
 
 import net.liftweb.mapper.{DriverType,MySqlDriver}
+import net.liftweb.common._
 
 import org.specs._
 
@@ -30,8 +31,13 @@ object DbHelperSpec extends Specification {
       MySqlHelper.getDriverType mustEqual MySqlDriver
     }
     "create a database." in {
-      MySqlHelper.addDatabase("foo", DbUser("user","pass"))
-      true mustBe true
+      MySqlHelper.addDatabase("lh_foo", DbUser("foo","pass")) must haveClass[Full[_]]
+    }
+    "fail to create a database with an invalid name." in {
+      MySqlHelper.addDatabase("", DbUser("foo","pass")) must haveClass[Failure]
+    }
+    "drop a database." in {
+      MySqlHelper.dropDatabase("lh_foo", DbUser("foo","pass")) must haveClass[Full[_]]
     }
   }
 

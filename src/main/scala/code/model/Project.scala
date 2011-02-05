@@ -39,7 +39,9 @@ with UserEditableKeyedMapper[Long, Project]
   }
 
   //import net.lifthub.lib.TemplateType
-  object liftType extends MappedEnum(this, TemplateType) {
+  //lazy val liftType = new MyLiftType
+  //protected class MyLiftType extends MappedEnum(this, TemplateType) {
+  object liftType extends MappedEnum[Project, TemplateType.type](this, TemplateType) {
   //object liftType extends MappedInt(this) {
     override def dbColumnName = "lift_type"
   }

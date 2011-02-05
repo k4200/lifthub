@@ -40,6 +40,17 @@ object TemplateType extends Enumeration {
   }
   implicit def valueToTemplateTypeValue(v: Value): TemplateTypeVal
     = v.asInstanceOf[TemplateTypeVal]
+
+//   val Basic = Val("Basic")
+//   val Blank = Val("Blank")
+//   val Mvc   = Val("MVC")
+//   val Xhtml = Val("XHTML")
+//  protected def Value(name: String): Value = new Val(name)
+//   case class Val(name: String) extends super.Val(name) {
+//     val dirName = "lift_" + name.toLowerCase
+//   }
+//   implicit def superValueToThisValue(v: Value): Val
+//     = v.asInstanceOf[Val]
 }
 
 object DbType extends Enumeration {
@@ -51,7 +62,6 @@ object DbType extends Enumeration {
     = v.asInstanceOf[DbTypeVal]
 
 }
-
 
 /**
  * Project information
@@ -72,6 +82,11 @@ object ProjectInfo {
   val basePath = "/home/lifthub" //TODO Move somewhere
   val templateBasePath = basePath + "/projecttemplates"
   val projectBasePath = basePath + "/userprojects"
+
+  import net.lifthub.model.Project
+  def apply(project: Project) {
+    this(project.name, project.liftType.is, "2.2")
+  }
 }
 
 // ------------------------------------------------

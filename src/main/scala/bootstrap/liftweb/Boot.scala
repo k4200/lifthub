@@ -11,6 +11,7 @@ import Loc._
 import mapper._
 
 import net.lifthub.model._
+import net.lifthub.lib._
 
 
 /**
@@ -29,6 +30,15 @@ class Boot {
       LiftRules.unloadHooks.append(vendor.closeAllConnections_! _)
 
       DB.defineConnectionManager(DefaultConnectionIdentifier, vendor)
+
+      //TODO
+      val dbHelpers = List(MySqlHelper)
+      dbHelpers.foreach( helper => {
+	//TODO
+        val vendor = helper.vendor.get
+        LiftRules.unloadHooks.append(vendor.closeAllConnections_! _)
+        DB.defineConnectionManager(helper.connectionIdentifier, vendor)
+      })
     }
 
     // Use Lift's Mapper ORM to populate the database
