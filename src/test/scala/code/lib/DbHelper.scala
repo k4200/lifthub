@@ -10,6 +10,15 @@ import org.specs._
 import bootstrap.liftweb.Boot
 
 object DbHelperSpec extends Specification {
+
+  //TODO move
+  "DbType" should {
+    "should provide attributes." in {
+      DbType.MySql.name mustEqual "MySQL"
+      DbType.MySql.driver mustEqual "com.mysql.jdbc.Driver"
+    }
+  }
+
   "DbUser" should {
     val dbUser = DbUser("a;b", "c;d")
     "contain input username and password" in {

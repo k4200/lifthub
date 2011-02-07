@@ -25,7 +25,8 @@ class LiftProject(info: ProjectInfo) extends DefaultWebProject(info) {
     "org.mockito" % "mockito-core" % "1.8.5" % "test->default",
     "mysql" % "mysql-connector-java" % "5.1.14", //MySQL
     "commons-io" % "commons-io" % "2.0.1",
-    "org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" withJavadoc
+    "org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" withJavadoc,
+    "commons-lang" % "commons-lang" % "2.5"
     //"org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" sources
     //"com.h2database" % "h2" % "1.2.138"
   ) ++ super.libraryDependencies

@@ -7,12 +7,21 @@ import net.liftweb.mapper._
 import net.liftweb.common._
 import net.liftweb.util._
 import Helpers._
-
+import scala.collection.mutable._
 
 case class DbUser(_user: String, _password: String) {
   val replacePattern = "[^\\w\\d]".r
   val user = replacePattern.replaceAllIn(_user, "")
   val password = replacePattern.replaceAllIn(_password, "")
+}
+
+object DbType extends Enumeration {
+  val MySql = DbTypeVal("MySQL", "com.mysql.jdbc.Driver")
+  //val PostgreSql = DbTypeVal("PostgreSQL")
+
+  case class DbTypeVal(name: String, driver: String) extends Val
+  implicit def valueToDbTypeValue(v: Value): DbTypeVal
+    = v.asInstanceOf[DbTypeVal]
 }
 
 
@@ -24,7 +33,6 @@ abstract class DbHelper[T <: DriverType](driverType: T) {
   def dropDatabase(name: String, owner: DbUser, host: String): Box[AnyRef]
 
   val dbnamePattern = "^\\w[\\w\\d]*$".r
-
   /**
    *
    */
@@ -54,7 +62,20 @@ abstract class DbHelper[T <: DriverType](driverType: T) {
   }
 }
 
-object MySqlHelper extends DbHelper(MySqlDriver) {
+object DbHelper {
+  val dbHelpers = new HashMap[DbType.Value, DbHelper[DriverType]]
+  //def addDbHelper[A <: DriverType](dbType: DbType.Value, dbHelper: DbHelper[A]): Unit = {
+  def addDbHelper(dbType: DbType.Value, dbHelper: DbHelper[DriverType]): Unit = {
+    dbHelpers(dbType) = dbHelper
+  }
+
+  def all = {
+    dbHelpers.values
+  }
+}
+
+//object MySqlHelper extends DbHelper(MySqlDriver) {
+object MySqlHelper extends DbHelper[DriverType](MySqlDriver) {
   object UserDbMySqlIdentifier extends ConnectionIdentifier {
     def jndiName = "userdb/mysql"
   }

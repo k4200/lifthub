@@ -32,8 +32,10 @@ class Boot {
       DB.defineConnectionManager(DefaultConnectionIdentifier, vendor)
 
       //TODO
-      val dbHelpers = List(MySqlHelper)
-      dbHelpers.foreach( helper => {
+      //DbHelper.addDbHelper(DbType.MySql, new MySqlHelper)
+      DbHelper.addDbHelper(DbType.MySql, MySqlHelper)
+
+      DbHelper.all.foreach( helper => {
 	//TODO
         val vendor = helper.vendor.get
         LiftRules.unloadHooks.append(vendor.closeAllConnections_! _)
@@ -46,6 +48,7 @@ class Boot {
     // any ORM you want
     Schemifier.schemify(true, Schemifier.infoF _, User)
     Schemifier.schemify(true, Schemifier.infoF _, Project)
+    Schemifier.schemify(true, Schemifier.infoF _, UserDatabase)
 
     // where to search snippet
     LiftRules.addToPackages("net.lifthub")

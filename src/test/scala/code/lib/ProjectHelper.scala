@@ -4,7 +4,8 @@ package lib {
 import org.specs._
 
 import net.lifthub.model.Project
-import net.lifthub.model.DbType
+import net.lifthub.model.UserDatabase
+//import net.lifthub.model.DbType
 
 
 object ProjectHelperSpec extends Specification {
@@ -31,13 +32,6 @@ object ProjectHelperSpec extends Specification {
     }
   }
 
-  //TODO move
-  "DbType" should {
-    "foo" in {
-      DbType.MySql.name mustEqual "MySQL"
-    }
-  }
-
   // -------------
 
   "ProjectInfo"should {
@@ -57,6 +51,7 @@ object ProjectHelperSpec extends Specification {
       project.liftVersion.set("2.2")
       project.templateType.set(TemplateType.Xhtml)
       val pi2 = ProjectInfo(project)
+      pi2.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_xhtml"
     }
   }
 
@@ -74,6 +69,19 @@ object ProjectHelperSpec extends Specification {
     "copy template" in {
       //ProjectHelper.copyTemplate(pi) mustBe true
       true mustBe true
+    }
+    "create a props file" in {
+      val user = DbUser("foo", "pass")
+      val dbInfo = UserDatabase.create
+      dbInfo.name.set("foo")
+      dbInfo.databaseType.set(DbType.MySql)
+      dbInfo.username.set("foo")
+      dbInfo.hostname.set("localhost")
+      ProjectHelper.generatePropsString(user, dbInfo) mustEqual
+"""db.driver=com.mysql.jdbc.Driver
+db.url=jdbc:mysql://localhost/foo
+db.user=foo
+db.password=pass"""
     }
     "add a project to git" in {
       //TODO can be tested after gitosis.conf and the key have been committed.

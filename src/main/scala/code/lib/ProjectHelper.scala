@@ -33,13 +33,17 @@ object TemplateType extends Enumeration {
 /**
  * Project information
  * TODO Add databaseType: MySQL, PostgreSQL etc.
- * TODO Merge this into Project.
+ * TODO Merge this into Project?
  */
 case class ProjectInfo (name: String, templateType: TemplateType.Value, version: String) {
   //import ProjectInfo._
   def templatePath: String = ProjectInfo.templateBasePath + "/lift_" +
     version + "_sbt/" + templateType.dirName
   def path: String = ProjectInfo.projectBasePath + "/" + name
+  /**
+   * contains database account information.
+   */
+  def propsPath = path + "/src/main/resources/default.props"
 
   //TODO
   //val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
@@ -211,6 +215,9 @@ object ProjectHelper {
     commitAndPushProject(projectInfo)
   }
 
+  /**
+   *
+   */
   def createProject(projectInfo: ProjectInfo, user: User) = {
     addUserToGitosis(projectInfo, user)
     copyTemplate(projectInfo)
@@ -257,6 +264,35 @@ object ProjectHelper {
         return false
     }
     true
+  }
+
+  import net.lifthub.model.UserDatabase
+  /**
+   * Creates a properties file for db connection
+   */
+  def createProps(projectInfo: ProjectInfo, dbInfo: UserDatabase): Boolean = {
+    val propsFile = new File(projectInfo.propsPath)
+    FileUtils.printToFile(propsFile)(writer => {
+      writer.write(generatePropsString(dbInfo))
+    })
+    true
+  }
+
+  /**
+   *
+   */
+  def generatePropsString(dbInfo: UserDatabase): String = {
+    (for(password <- dbInfo.plainPassword)
+    yield
+    """db.driver=%s
+      |db.url=jdbc:%s://%s/%s
+      |db.user=%s
+      |db.password=%s"""
+      .stripMargin.format(dbInfo.databaseType.is.driver,
+                          "mysql", dbInfo.hostname.is, dbInfo.name.is,
+                          dbInfo.username, password)
+    )getOrElse ""
+
   }
 
 }

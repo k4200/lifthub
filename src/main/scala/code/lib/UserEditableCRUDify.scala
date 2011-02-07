@@ -45,15 +45,6 @@ extends KeyedMapper[KeyType, OwnerType] {
 
   val userObject: GenProtoUser
 
-//   type UserType
-
-//   def userMeta: KeyedMetaMapper[Long, UserType] = userObject.asInstanceOf[KeyedMetaMapper[Long, UserType]]
-//   lazy val user: MappedLongForeignKey[OwnerType, KeyedMetaMapper[Long, UserType]]
-//     = new MyUserField(this, userMeta)
-//   protected class MyUserField[OwnerType, UserType](obj: OwnerType, _foreignMeta: KeyedMetaMapper[Long, UserType]) 
-//             extends MappedLongForeignKey(obj, _foreignMeta)
-
-
   lazy val userId: MappedLong[OwnerType] = new MyUserId(this)
   protected class MyUserId(obj: OwnerType) extends MappedLong(obj) {
     override def dbIndexed_? = true
@@ -64,13 +55,6 @@ extends KeyedMapper[KeyType, OwnerType] {
   //object userId extends MappedLong(this)
 
 }
-
-// trait OwnerUser {
-//   self: BaseLongKeyedMapper =>
-//   def userIdField = id
-//   object id extends MappedLongIndex[MapperType](this.asInstanceOf[MapperType])
-// }
-
 
 
 

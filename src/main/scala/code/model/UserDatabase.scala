@@ -11,20 +11,24 @@ import net.lifthub.model._
 import net.lifthub.lib._
 
 
-object DbType extends Enumeration {
-  val MySql = DbTypeVal("MySQL")
-  //val PostgreSql = DbTypeVal("PostgreSQL")
-
-  case class DbTypeVal(name: String) extends Val
-  implicit def valueToDbTypeValue(v: Value): DbTypeVal
-    = v.asInstanceOf[DbTypeVal]
-}
-
 object UserDatabase extends UserDatabase with LongKeyedMetaMapper[UserDatabase]
 with UserEditableCRUDify[Long, UserDatabase] {
-  override def dbTableName = "database"; // define the DB table name
+  override def dbTableName = "user_database"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
+  import org.apache.commons.lang.RandomStringUtils
+  def create(project: Project): UserDatabase = {
+    val plainPassword = RandomStringUtils.randomAlphanumeric(8)
+    //TODO MySQL
+    val a = super.create.name(project.name).databaseType(DbType.MySql).username(project.name).password(plainPassword)
+    a.plainPassword = Full(plainPassword)
+    a
+  }
+
+  override def beforeSave = List(userDatabase =>  {
+    //TODO instantiate one of DbHelper subclasses.
+    //TODO create a database using DbHelper
+  })
 }
 
 class UserDatabase extends LongKeyedMapper[UserDatabase] with IdPK
@@ -50,8 +54,21 @@ with UserEditableKeyedMapper[Long, UserDatabase] {
     //override def validations = valUnique(S.??("unique.database.name")) _ :: super.validations
   }
 
+  /**
+   * Hashed in the database.
+   */
   object password extends MappedPassword(this) {
   }
+
+  /**
+   * Users shouldn't be able to change this value.
+   */
+  object hostname extends MappedString(this, 20) {
+    override def defaultValue = "localhost" 
+  }
+  
+  
+  var plainPassword: Box[String] = Empty
 }
 
 

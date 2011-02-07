@@ -16,15 +16,29 @@ with UserEditableCRUDify[Long, Project]
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
   override def beforeSave = List(project =>  {
-    //project.
+    User.currentUser match {
+      case Full(user) =>
+	if(project.userId == 0) {
+          val dbInfo = UserDatabase.create(project)
+          dbInfo.userId(user.id)
+          dbInfo.save
+          project.database(dbInfo)
+          project.userId(user.id)
+	}
+      case _ => println("user is not logged in.") //TODO
+    }
   })
 
   override def afterSave = List(project =>  {
-    User.find(By(User.id, project.userId)) match {
-      case Full(user) => 
+    (for(dbInfo <-project.database.obj;
+    user <- User.find(By(User.id, project.userId)))
+    yield {
+	//TODO This should be done only at creation.
         val projectInfo = ProjectInfo(project)
         ProjectHelper.createProject(projectInfo, user)
-      case _ => println("error...")
+	ProjectHelper.createProps(projectInfo, dbInfo)
+    }) getOrElse {
+      println("error...") //TODO rollback
     }
   })
 }
@@ -48,6 +62,7 @@ with UserEditableKeyedMapper[Long, Project]
 
   object liftVersion extends MappedString(this, 10) {
     override def dbColumnName = "lift_version"
+    override def defaultValue = "2.2" 
   }
 
   object database extends MappedLongForeignKey(this, UserDatabase) {
