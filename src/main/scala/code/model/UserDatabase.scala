@@ -3,9 +3,12 @@ package model {
 
 
 import net.liftweb._
+import util.{FieldError,FieldIdentifier,StringValidators}
 import common._
 import mapper._
 import http.S
+
+import scala.xml.Text
 
 import net.lifthub.model._
 import net.lifthub.lib._
@@ -17,19 +20,21 @@ with UserEditableCRUDify[Long, UserDatabase] {
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
   import org.apache.commons.lang.RandomStringUtils
-  def create(project: Project): UserDatabase = {
+  def createFromProject(project: Project): UserDatabase = {
     val plainPassword = RandomStringUtils.randomAlphanumeric(8)
     //TODO MySQL
-    val a = super.create.name(project.name).databaseType(DbType.MySql).username(project.name).password(plainPassword)
-    a.plainPassword = Full(plainPassword)
+    val dbType = DbType.MySql
+    val a = create.name(project.name).databaseType(dbType).username(project.name).password(plainPassword)
     a
   }
 
-  override def beforeSave = List(userDatabase =>  {
-    //TODO instantiate one of DbHelper subclasses.
-    //TODO create a database using DbHelper
+  override def afterSave = List(userDatabase =>  {
+    val dbHelper = DbHelper.get(userDatabase.databaseType.is)
+    dbHelper.addDatabase(userDatabase)
   })
 }
+
+
 
 class UserDatabase extends LongKeyedMapper[UserDatabase] with IdPK
 with UserEditableKeyedMapper[Long, UserDatabase] {
@@ -39,11 +44,16 @@ with UserEditableKeyedMapper[Long, UserDatabase] {
 
   //object user extends MappedLongForeignKey(this, User)
 
+  val namePattern = "^[a-zA-Z]\\w*$".r.pattern
+  val passPattern = "^\\w+$".r.pattern
   /**
    * The same as the project name.
    */
   object name extends MappedString(this, 20) {
-    override def validations = valUnique(S.??("unique.database.name")) _ :: super.validations
+    override def validations =
+      valUnique(S.??("validator.database.name.unique")) _ ::
+      valRegex(namePattern, S.??("validator.database.name.invalid")) _ ::
+      super.validations
   }
 
   object databaseType extends MappedEnum[UserDatabase, DbType.type](this, DbType) {
@@ -51,13 +61,37 @@ with UserEditableKeyedMapper[Long, UserDatabase] {
   }
 
   object username extends MappedString(this, 20) {
-    //override def validations = valUnique(S.??("unique.database.name")) _ :: super.validations
+    override def validations =
+      valUnique(S.??("validator.database.username.unique")) _ ::
+      valRegex(namePattern, S.??("validator.database.username.invalid")) _ ::
+      super.validations
   }
 
   /**
    * Hashed in the database.
    */
-  object password extends MappedPassword(this) {
+  object password extends MappedPassword(this) with StringValidators {
+    override def set(value: String): String = {
+      plainPassword = value
+      super.set(value)
+    }
+    
+    /**
+     * MappedPassword redifines <code>validate</code> and ignores
+     * <code>validations.</code>
+     */
+    override def validate: List[FieldError] = {
+      (plainPassword match {
+        case Full(str) =>
+          if (passPattern.matcher(str).matches) Nil
+          else List(FieldError(this, Text(S.??("validator.database.password.invalid"))))
+        case _ => Nil
+      }) ::: (super.validate)
+    }
+
+    def valueTypeToBoxString(in: String): Box[String] = Full(in)
+    def boxStrToValType(in: Box[String]): String = in openOr ""
+    def maxLen = 20 //TODO ok?
   }
 
   /**
@@ -68,7 +102,9 @@ with UserEditableKeyedMapper[Long, UserDatabase] {
   }
   
   
-  var plainPassword: Box[String] = Empty
+  var _plainPassword: Box[String] = Empty
+  protected def plainPassword_=(value: String) = _plainPassword = Full(value)
+  def plainPassword = _plainPassword
 }
 
 

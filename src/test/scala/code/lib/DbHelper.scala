@@ -9,6 +9,9 @@ import org.specs._
 
 import bootstrap.liftweb.Boot
 
+import net.lifthub.model.UserDatabase
+
+
 object DbHelperSpec extends Specification {
 
   //TODO move
@@ -19,35 +22,26 @@ object DbHelperSpec extends Specification {
     }
   }
 
-  "DbUser" should {
-    val dbUser = DbUser("a;b", "c;d")
-    "contain input username and password" in {
-      dbUser._user mustEqual "a;b"
-      dbUser._password mustEqual "c;d"
-    }
-    "remove special chars in username and password" in {
-      dbUser.user mustEqual "ab"
-      dbUser.password mustEqual "cd"
-    }
-  }
-
   "MySqlHelper" should {
     shareVariables()
     // This makes the following code called only once, hopefully!
     val boot = new Boot
     boot.boot
-
+    
+    val db = UserDatabase.create.name("foo").username("foo").password("password")
+    
     "return the correct driver." in {
       MySqlHelper.getDriverType mustEqual MySqlDriver
     }
     "create a database." in {
-      MySqlHelper.addDatabase("lh_foo", DbUser("foo","pass")) must haveClass[Full[_]]
+      MySqlHelper.addDatabase(db) must haveClass[Full[_]]
     }
     "fail to create a database with an invalid name." in {
-      MySqlHelper.addDatabase("", DbUser("foo","pass")) must haveClass[Failure]
+      val invalidDb = UserDatabase.create.name("123").username("foo")
+      MySqlHelper.addDatabase(invalidDb) must haveClass[Failure]
     }
     "drop a database." in {
-      MySqlHelper.dropDatabase("lh_foo", DbUser("foo","pass")) must haveClass[Full[_]]
+      MySqlHelper.dropDatabase(db) must haveClass[Full[_]]
     }
   }
 

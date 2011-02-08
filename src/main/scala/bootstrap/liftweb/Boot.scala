@@ -31,12 +31,12 @@ class Boot {
 
       DB.defineConnectionManager(DefaultConnectionIdentifier, vendor)
 
-      //TODO
-      //DbHelper.addDbHelper(DbType.MySql, new MySqlHelper)
+      //Register sub-classes of DbHelper
       DbHelper.addDbHelper(DbType.MySql, MySqlHelper)
+      //DbHelper.addDbHelper(DbType.PostgreSql, PostgreSqlHelper)
 
       DbHelper.all.foreach( helper => {
-	//TODO
+        //This may throw an Exception.
         val vendor = helper.vendor.get
         LiftRules.unloadHooks.append(vendor.closeAllConnections_! _)
         DB.defineConnectionManager(helper.connectionIdentifier, vendor)

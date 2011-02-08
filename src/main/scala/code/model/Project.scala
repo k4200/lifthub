@@ -19,7 +19,7 @@ with UserEditableCRUDify[Long, Project]
     User.currentUser match {
       case Full(user) =>
 	if(project.userId == 0) {
-          val dbInfo = UserDatabase.create(project)
+          val dbInfo = UserDatabase.createFromProject(project)
           dbInfo.userId(user.id)
           dbInfo.save
           project.database(dbInfo)

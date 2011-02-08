@@ -71,13 +71,13 @@ object ProjectHelperSpec extends Specification {
       true mustBe true
     }
     "create a props file" in {
-      val user = DbUser("foo", "pass")
       val dbInfo = UserDatabase.create
       dbInfo.name.set("foo")
       dbInfo.databaseType.set(DbType.MySql)
       dbInfo.username.set("foo")
       dbInfo.hostname.set("localhost")
-      ProjectHelper.generatePropsString(user, dbInfo) mustEqual
+      dbInfo.password.set("pass")
+      ProjectHelper.generatePropsString(dbInfo) mustEqual
 """db.driver=com.mysql.jdbc.Driver
 db.url=jdbc:mysql://localhost/foo
 db.user=foo

@@ -5,15 +5,13 @@ package lib {
 //import net.liftweb.mapper.{DriverType,MySqlDriver, ConnectionIdentifier, DB}
 import net.liftweb.mapper._
 import net.liftweb.common._
+import net.liftweb.http.S
 import net.liftweb.util._
 import Helpers._
+
 import scala.collection.mutable._
 
-case class DbUser(_user: String, _password: String) {
-  val replacePattern = "[^\\w\\d]".r
-  val user = replacePattern.replaceAllIn(_user, "")
-  val password = replacePattern.replaceAllIn(_password, "")
-}
+import net.lifthub.model.UserDatabase
 
 object DbType extends Enumeration {
   val MySql = DbTypeVal("MySQL", "com.mysql.jdbc.Driver")
@@ -29,8 +27,8 @@ abstract class DbHelper[T <: DriverType](driverType: T) {
   def getDriverType(): T = driverType
 
   // Abstract methods
-  def addDatabase(name: String, owner: DbUser, host: String): Box[AnyRef]
-  def dropDatabase(name: String, owner: DbUser, host: String): Box[AnyRef]
+  def addDatabase(database: UserDatabase): Box[AnyRef]
+  def dropDatabase(database: UserDatabase): Box[AnyRef]
 
   val dbnamePattern = "^\\w[\\w\\d]*$".r
   /**
@@ -53,18 +51,10 @@ abstract class DbHelper[T <: DriverType](driverType: T) {
   }
 
   def connectionIdentifier: ConnectionIdentifier
-
-  def checkDbName(name: String): Box[String] = {
-    dbnamePattern.findFirstIn(name) match {
-      case Some(safeName) => Full(safeName)
-      case _ => Failure("DB name is invalid:" + name)
-    }
-  }
 }
 
 object DbHelper {
   val dbHelpers = new HashMap[DbType.Value, DbHelper[DriverType]]
-  //def addDbHelper[A <: DriverType](dbType: DbType.Value, dbHelper: DbHelper[A]): Unit = {
   def addDbHelper(dbType: DbType.Value, dbHelper: DbHelper[DriverType]): Unit = {
     dbHelpers(dbType) = dbHelper
   }
@@ -72,29 +62,35 @@ object DbHelper {
   def all = {
     dbHelpers.values
   }
+
+  def get(dbType: DbType.Value): DbHelper[DriverType] = {
+    dbHelpers(dbType)
+  }
 }
 
-//object MySqlHelper extends DbHelper(MySqlDriver) {
 object MySqlHelper extends DbHelper[DriverType](MySqlDriver) {
   object UserDbMySqlIdentifier extends ConnectionIdentifier {
     def jndiName = "userdb/mysql"
   }
   override def connectionIdentifier = UserDbMySqlIdentifier
 
-  def addDatabase(name: String, owner: DbUser, host: String = "localhost") = {
+  def addDatabase(database: UserDatabase): Box[AnyRef] = {
+    if(database.validate != Nil) {
+      return Failure(S.??("error.dbhelper.invalid"))
+    }
     //TODO ugly... don't know how to write this.
     (for {
-      safeName <- checkDbName(name)
-      _ <- runUpdate("CREATE DATABASE " + safeName)
+      password <- database.plainPassword
+      _ <- runUpdate("CREATE DATABASE " + database.name)
       _ <- runUpdate("CREATE USER '%s'@'%s' IDENTIFIED BY '%s'"
-                    .format(owner.user, host, owner.password))
+                     .format(database.username, database.hostname, password))
       _ <- runUpdate("GRANT ALL on %s.* to '%s'@'%s'"
-                  .format(safeName, owner.user, host))
-    } yield "Database %s added successfully".format(safeName)) match {
+                     .format(database.name, database.username, database.hostname))
+    } yield "Database %s added successfully".format(database.name)) match {
       case ok: Full[_] => ok
       case ng => {
-	tryo { dropDatabase(name, owner, host) }
-	ng
+        tryo { dropDatabase(database) }
+        ng
       }
     }
   }
@@ -102,11 +98,13 @@ object MySqlHelper extends DbHelper[DriverType](MySqlDriver) {
   /**
    * @return Full(message) if success, otherwise Failure
    */
-  def dropDatabase(name: String, owner: DbUser, host: String = "localhost"): Box[String] = {
+  def dropDatabase(database: UserDatabase): Box[AnyRef] = {
+    if(database.validate != Nil) {
+      return Failure(S.??("error.dbhelper.invalid"))
+    }
     for {
-      safeName <- checkDbName(name)
-      _ <- runUpdate("DROP DATABASE " + safeName)
-      _ <- runUpdate("DROP USER '%s'@'%s'".format(owner.user, host))
+      _ <- runUpdate("DROP DATABASE " + database.name)
+      _ <- runUpdate("DROP USER '%s'@'%s'".format(database.username, database.hostname))
     } yield "drop database succeeded."
   }
 
