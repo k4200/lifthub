@@ -24,8 +24,7 @@ with UserEditableCRUDify[Long, UserDatabase] {
     val plainPassword = RandomStringUtils.randomAlphanumeric(8)
     //TODO MySQL
     val dbType = DbType.MySql
-    val a = create.name(project.name).databaseType(dbType).username(project.name).password(plainPassword)
-    a
+    create.name(project.name).databaseType(dbType).username(project.name).password(plainPassword)
   }
 
   override def afterSave = List(userDatabase =>  {

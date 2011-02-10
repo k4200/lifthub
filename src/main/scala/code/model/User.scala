@@ -16,6 +16,8 @@ object User extends User with MetaMegaProtoUser[User] {
   override def fieldOrder = List(id, firstName, lastName, email,
   locale, timezone, password, sshKey)
 
+  override def editFields = super.editFields ::: List(sshKey)
+
   // comment this line out to require email validations
   //override def skipEmailValidation = true
 

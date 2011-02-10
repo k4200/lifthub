@@ -2,20 +2,28 @@ package net.lifthub {
 package model {
 
 import net.liftweb._
+import util.{FieldError,FieldIdentifier,StringValidators}
 import common._
 import mapper._
 import http.S
+
+import scala.xml.Text
 
 import net.lifthub.model._
 import net.lifthub.lib._
 
 object Project extends Project with LongKeyedMetaMapper[Project]
 with UserEditableCRUDify[Long, Project]
+with AggregateFunctions[Project]
 {
   override def dbTableName = "projects"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
-  override def beforeSave = List(project =>  {
+  override def beforeCreate = List(project =>  {
+    //TODO Check check how many projects the user owns already.
+
+    project.port(getAvailablePort)
+
     User.currentUser match {
       case Full(user) =>
 	if(project.userId == 0) {
@@ -29,18 +37,27 @@ with UserEditableCRUDify[Long, Project]
     }
   })
 
-  override def afterSave = List(project =>  {
+  override def afterCreate = List(project =>  {
     (for(dbInfo <-project.database.obj;
     user <- User.find(By(User.id, project.userId)))
     yield {
-	//TODO This should be done only at creation.
-        val projectInfo = ProjectInfo(project)
-        ProjectHelper.createProject(projectInfo, user)
-	ProjectHelper.createProps(projectInfo, dbInfo)
+      val projectInfo = ProjectInfo(project)
+      ProjectHelper.createProject(projectInfo, user)
+      ProjectHelper.createProps(projectInfo, dbInfo)
     }) getOrElse {
       println("error...") //TODO rollback
     }
   })
+
+  override def afterDelete = List(project => {
+    //TODO Delete project files.
+  })
+
+  def getAvailablePort: Int = {
+    val maxport = max(port)
+    if (maxport != 0) maxport.toInt + 1
+    else 9000
+  }
 }
 
 class Project extends LongKeyedMapper[Project]
@@ -79,9 +96,24 @@ with UserEditableKeyedMapper[Long, Project]
     )
   }
 
-//   object databaseType extends MappedEnum[Project, DbType.type](this, DbType) {
-//     override def dbColumnName = "database_type"
-//   }
+  /**
+   * Port number on which the server (currently jetty) runs.
+   * 9000-9999 are used for now.
+   */
+  object port extends MappedInt(this) {
+    /**
+     * This field has to be set by the system.
+     */
+    override def dbDisplay_? = false
+    override def validations = valUnique(S.??("validation.project.port")) _ :: super.validations
+    def valUnique(msg: => String)(value: Int): List[FieldError] =
+    fieldOwner.getSingleton.findAll(By(this,value)).
+    filter(!_.comparePrimaryKeys(this.fieldOwner)) match {
+      case Nil => Nil
+      case x :: _ => List(FieldError(this, Text(msg))) // issue 179
+    }
+  }
+
 }
 
 
