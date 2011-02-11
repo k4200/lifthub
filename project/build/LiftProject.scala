@@ -1,6 +1,17 @@
 import sbt._
 
-class LiftProject(info: ProjectInfo) extends DefaultWebProject(info) {
+class LifthubProject(info: ProjectInfo) extends ParentProject(info) {
+  // def project(path: Path, name: String, deps: Project*): Project
+  lazy val core = project("core", "Lifthub core")
+  lazy val web = project("web", "Lifthub web", new LiftProject(_))
+  lazy val bgtasks = project("bgtasks", "Lifthub background tasks", core)
+
+  override def parallelExecution = true
+  
+}
+
+protected class LiftProject(info: ProjectInfo)
+extends DefaultWebProject(info) {
   val liftVersion = "2.2"
 
   override def artifactID = "lifthub"
