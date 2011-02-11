@@ -199,7 +199,41 @@ object GitosisHelper {
 
 // ------------------------------------------------
 object SbtHelper {
+  import net.liftweb.util.Helpers._
+  import net.liftweb.common._
+  import net.liftweb.mapper._
+  //import xsbt.Process._
+  import net.lifthub.model.Project
+  //TODO COR?
+  def update(project: Project): Box[String] = {
+    val pi = ProjectInfo(project)
+    println("pi.path: " + pi.path)
+    val pb = (new java.lang.ProcessBuilder("./sbt", "update")) directory pi.path
+    tryo {
+      val proc = pb.start
+      if (proc.waitFor == 0) {
+	Full("'sbt update' succeeded.")
+      } else {
+	Failure("'sbt update' returned non-zero.")
+      }
+    } openOr {
+      Failure("failed to start 'sbt update'.")
+    }
+  }
 
+  def compile = {
+  }
+
+  def main(args: Array[String]) {
+    import bootstrap.liftweb.Boot
+    val boot = new Boot
+    boot.boot
+
+    println("SbtHelper.main")
+    for(project <- Project.find(By(Project.id, 1)))
+    yield
+      SbtHelper.update(project)
+  }
 
 }
 
@@ -242,6 +276,8 @@ object ProjectHelper {
     import org.apache.commons.io.FileUtils
     try {
       FileUtils.copyDirectory(projectInfo.templatePath, projectInfo.path)
+      val sbt = projectInfo.path + "/sbt"
+      sbt.setExecutable(true)
       true
     } catch {
       case e: java.io.IOException => false

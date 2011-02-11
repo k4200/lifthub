@@ -64,6 +64,17 @@ object ProjectHelperSpec extends Specification {
   }
 
   // -------------
+  "SbtHelper" should {
+    "do sbt update." in {
+      //TODO
+//       val project = Project.create
+//       project.liftVersion.set("2.2")
+//       project.templateType.set(TemplateType.Xhtml)
+//       SbtHelper.update(project)
+    }
+  }
+
+  // -------------
   // test cases that have side effects.
   "ProjectHelper" should {
     "copy template" in {

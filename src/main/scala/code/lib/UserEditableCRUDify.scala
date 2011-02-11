@@ -9,6 +9,7 @@ import mapper._
 import sitemap._;
 import Loc._;
 import proto.{ProtoUser => GenProtoUser}
+import util.Helpers.tryo
 
 trait UserEditableCRUDify [KeyType,
                            CrudType <: UserEditableKeyedMapper[KeyType, CrudType]]
@@ -16,8 +17,10 @@ trait UserEditableCRUDify [KeyType,
 extends CRUDify [KeyType, CrudType] {
   self: CrudType with KeyedMetaMapper[KeyType, CrudType] =>
 
+  //TODO Implement the other actions.
+
   override protected def doDeleteSubmit(item: TheCrudType, from: String)() = {
-    item.userObject.currentUserId match {
+    self.userObject.currentUserId match {
       case Full(userId) => 
         if(userId == item.userId.is) {
 	  S.notice(S ? "Deleted")
@@ -36,6 +39,14 @@ extends CRUDify [KeyType, CrudType] {
   override def createMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
   override def editMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
   override def deleteMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
+
+  def findAllOfOwner: List[TheCrudType] = {
+    (for(userIdStr <- self.userObject.currentUserId;
+         userId <- tryo{userIdStr.toInt})
+    yield
+      findAll(By(self.userId, userId))
+    ) openOr Nil
+  }
 }
 
 trait UserEditableKeyedMapper[KeyType, OwnerType <: KeyedMapper[KeyType, OwnerType]]

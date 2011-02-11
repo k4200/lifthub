@@ -16,6 +16,19 @@ object Project extends Project with LongKeyedMetaMapper[Project]
 with UserEditableCRUDify[Long, Project]
 with AggregateFunctions[Project]
 {
+  object Status extends Enumeration {
+    val Stopped = StatusVal("Stopped")
+    val Starting = StatusVal("Starting")
+    val Running = StatusVal("Running")
+    val Stopping = StatusVal("Stopping")
+    case class StatusVal(name: String) extends Val(name) {
+      //
+    }
+    implicit def valueToStatusValue(v: Value): StatusVal
+      = v.asInstanceOf[StatusVal]
+  }
+
+
   override def dbTableName = "projects"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
@@ -114,6 +127,10 @@ with UserEditableKeyedMapper[Long, Project]
     }
   }
 
+  import Project.Status
+  object status extends MappedEnum[Project, Status.type](this, Status) {
+    override def dbColumnName = "status"
+  }
 }
 
 

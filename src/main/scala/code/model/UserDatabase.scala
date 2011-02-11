@@ -16,14 +16,15 @@ import net.lifthub.lib._
 
 object UserDatabase extends UserDatabase with LongKeyedMetaMapper[UserDatabase]
 with UserEditableCRUDify[Long, UserDatabase] {
-  override def dbTableName = "user_database"; // define the DB table name
+  override def dbTableName = "user_databases"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
+
+  val DEFAULT_DBTYPE = DbType.MySql
 
   import org.apache.commons.lang.RandomStringUtils
   def createFromProject(project: Project): UserDatabase = {
     val plainPassword = RandomStringUtils.randomAlphanumeric(8)
-    //TODO MySQL
-    val dbType = DbType.MySql
+    val dbType = DEFAULT_DBTYPE
     create.name(project.name).databaseType(dbType).username(project.name).password(plainPassword)
   }
 

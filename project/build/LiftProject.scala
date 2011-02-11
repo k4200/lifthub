@@ -3,6 +3,8 @@ import sbt._
 class LiftProject(info: ProjectInfo) extends DefaultWebProject(info) {
   val liftVersion = "2.2"
 
+  override def artifactID = "lifthub"
+
   // uncomment the following if you want to use the snapshot repo
   // val scalatoolsSnapshot = ScalaToolsSnapshots
 
@@ -27,6 +29,9 @@ class LiftProject(info: ProjectInfo) extends DefaultWebProject(info) {
     "commons-io" % "commons-io" % "2.0.1",
     "org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" withJavadoc,
     "commons-lang" % "commons-lang" % "2.5"
+    //"org.scala-tools.sbt" % "sbt-launch" % "0.7.2" // doesn't work with 2.8
+    // https://github.com/harrah/process
+    //"org.scala-tools.sbt" % "process" % "0.1" // doesn't work with 2.8
     //"org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" sources
     //"com.h2database" % "h2" % "1.2.138"
   ) ++ super.libraryDependencies
