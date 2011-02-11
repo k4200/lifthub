@@ -2,32 +2,18 @@ import sbt._
 
 class LifthubProject(info: ProjectInfo) extends ParentProject(info) {
   // def project(path: Path, name: String, deps: Project*): Project
-  lazy val core = project("core", "Lifthub core")
-  lazy val web = project("web", "Lifthub web", new LiftProject(_))
+  lazy val core = project("core", "Lifthub core", new CoreProject(_))
+  lazy val web = project("web", "Lifthub web", new LiftProject(_), core)
   lazy val bgtasks = project("bgtasks", "Lifthub background tasks", core)
 
   override def parallelExecution = true
   
 }
 
-protected class LiftProject(info: ProjectInfo)
-extends DefaultWebProject(info) {
+protected class CoreProject(info: ProjectInfo) extends DefaultProject(info) {
   val liftVersion = "2.2"
 
-  override def artifactID = "lifthub"
-
-  // uncomment the following if you want to use the snapshot repo
-  // val scalatoolsSnapshot = ScalaToolsSnapshots
-
-  // If you're using JRebel for Lift development, uncomment
-  // this line
-  // override def scanDirectories = Nil
-
-
-  // Add repositories here
   val jGitRepo = "JGit" at "http://download.eclipse.org/jgit/maven"
-  //val eGItRepo = "EGit" at "http://download.eclipse.org/egit/updates"
-
   override def libraryDependencies = Set(
     "net.liftweb" %% "lift-webkit" % liftVersion % "compile->default",
     "net.liftweb" %% "lift-mapper" % liftVersion % "compile->default",
@@ -46,4 +32,16 @@ extends DefaultWebProject(info) {
     //"org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" sources
     //"com.h2database" % "h2" % "1.2.138"
   ) ++ super.libraryDependencies
+}
+
+protected class LiftProject(info: ProjectInfo)
+extends DefaultWebProject(info) {
+  override def artifactID = "lifthub"
+
+  // uncomment the following if you want to use the snapshot repo
+  // val scalatoolsSnapshot = ScalaToolsSnapshots
+
+  // If you're using JRebel for Lift development, uncomment
+  // this line
+  // override def scanDirectories = Nil
 }
