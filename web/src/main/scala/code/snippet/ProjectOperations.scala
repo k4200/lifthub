@@ -24,11 +24,13 @@ class ProjectOperations {
 	".name *" #> p.name &
         ".update *" #> SHtml.ajaxButton(Text("Update"), () => update(p)) &
         ".build *" #> SHtml.ajaxButton(Text("Build"), () => build(p)) &
+        ".deploy *" #> SHtml.ajaxButton(Text("Deploy"), () => deploy(p)) &
         ".process *" #> SHtml.ajaxButton(Text("Start"), () => process(p)) &
         ".process [href]" #> ""
       )
   }
 
+  //TODO repetition
   def update(project: Project): JsCmd = {
     SbtHelper.update(project) match {
       case Full(x) => S.notice(x)
@@ -43,6 +45,15 @@ class ProjectOperations {
       case Full(x) => S.notice(x)
       case Failure(x, _, _) => S.error(x.toString)
       case Empty => S.error("build failed.")
+    }
+    Noop
+  }
+
+  def deploy(project: Project): JsCmd = {
+    SbtHelper.deploy(project) match {
+      case Full(x) => S.notice(x)
+      case Failure(x, _, _) => S.error(x.toString)
+      case Empty => S.error("deploy failed.")
     }
     Noop
   }

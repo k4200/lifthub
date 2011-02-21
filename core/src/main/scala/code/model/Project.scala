@@ -30,7 +30,6 @@ with AggregateFunctions[Project]
 
   // Constant values
   //TODO should vary depending on the user (ie. payment status).
-  val MAX_NUM_PROJECTS = 1
   val PORT_RANGE = (9000, 9999)
 
   override def dbTableName = "projects"; // define the DB table name
@@ -45,10 +44,10 @@ with AggregateFunctions[Project]
   )
 
   private def checkNumberOfDatabases(project: Project): List[FieldError] = {
-    User.currentUserId match {
-      case Full(userId) =>
-        if (count(By(Project.userId, userId.toLong)) < MAX_NUM_PROJECTS) {
-          List(FieldError(Project.name, Text("You can't create more than 1 project.")))
+    User.currentUser match {
+      case Full(user) =>
+        if (count(By(Project.userId, user.id)) >= user.maxNumProjects) {
+          List(FieldError(Project.name, Text("You can't create more than %d project.".format(user.maxNumProjects))))
         } else {
 	  Nil
 	}

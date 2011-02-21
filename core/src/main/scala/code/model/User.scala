@@ -1,9 +1,14 @@
 package net.lifthub {
 package model {
 
+import scala.xml.{ NodeSeq, Text }
+
 import _root_.net.liftweb.mapper._
-import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
+import _root_.net.liftweb.util._
+import net.liftweb.http._
+import net.liftweb.sitemap._
+import Loc._
 
 import net.lifthub.lib.GitosisHelper
 
@@ -42,12 +47,33 @@ object User extends User with MetaMegaProtoUser[User] {
     }
   })
 
+  // ---------------- invitation -----------------------
+  // https://gist.github.com/780788
+  def invitationSuffix = "invitation"
+  lazy val invitationPath = thePath(invitationSuffix)
+
+  def invitationMenuLoc: Box[Menu] =
+    Full(Menu(Loc("Invitation", (invitationPath, true), S.??("invitation"), invitationMenuLocParams)))
+
+  protected def invitationMenuLocParams: List[LocParam[Unit]] =
+    //snarfLastItem is defined in ProtoUser.
+    //Template(() => wrapIt(invitation(snarfLastItem))) ::
+    Template(() => invitation(S.request)) ::
+    If(notLoggedIn_? _, S.??("logout.first")) :: //TODO
+    Nil
+
+  def invitation(request: Box[Req]): NodeSeq = {
+    Text("aa")
+  }
 }
 
 /**
  * An O-R mapped "User" class that includes first name, last name, password and we add a "Personal Essay" to it
  */
 class User extends MegaProtoUser[User] {
+  //TODO Move
+  val MAX_NUM_PROJECTS = 1
+
   def getSingleton = User // what's the "meta" server
 
   //Just for testing when I was answering the question on the URL below.
@@ -68,6 +94,11 @@ class User extends MegaProtoUser[User] {
     GitosisHelper.createSshKey(this)
     GitosisHelper.gitAddSshKey(this)
     GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id, true)
+  }
+
+  def maxNumProjects: Int = {
+    if(this.superUser_?) 10
+    else MAX_NUM_PROJECTS
   }
 }
 

@@ -18,6 +18,7 @@ import net.lifthub.common.ActorConfig._
 import net.lifthub.lib.ServerInfo
 import net.lifthub.model.Project
 
+import bootstrap.liftweb.Boot
 
 object ServerManagerCore {
   def start(server: ServerInfo) = {
@@ -69,13 +70,15 @@ class ProjectStatusMonitor extends Actor {
           val server = ServerInfo(project)
           ServerManagerCore.start(server)
           self.reply(Response.STARTED)
+          println("started " + projectId)
         case _ =>
           //TODO ERROR  
           self.reply(Response.STARTED)
+          println("failed to start " + projectId)
       }
-      println("starting " + projectId)
     case Stop(projectId) => 
       println("stopping " + projectId)
+          //ServerManagerCore.start(server)
       self.reply(Response.STOPPED)
     case _ => log.slf4j.info("error")
   }
@@ -83,12 +86,21 @@ class ProjectStatusMonitor extends Actor {
 
 object ServerManagerRunner {
   import net.lifthub.common.ActorConfig._
+
+  def initLiftMapper = {
+    val boot = new Boot
+    boot.boot
+  }
+
   def run = {
     Actor.remote.start(SERVER_HOST, SERVER_PORT)
     Actor.remote.register(REGISTER_NAME, actorOf[ProjectStatusMonitor])
   }
 
-  def main(args: Array[String]) = run
+  def main(args: Array[String]) = {
+    initLiftMapper
+    run
+  }
 }
 
 

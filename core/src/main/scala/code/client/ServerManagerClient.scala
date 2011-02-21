@@ -28,6 +28,10 @@ object ServerManagerClient {
     }
   }
 
+  def stopServer(project: Project): Box[String] = {
+    //TODO implement this.
+    Empty
+  }
 }
 
 }
