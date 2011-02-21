@@ -5,6 +5,9 @@ import _root_.net.liftweb.mapper._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
 
+import net.lifthub.lib.GitosisHelper
+
+
 /**
  * The singleton that has methods for accessing the database
  */
@@ -27,6 +30,18 @@ object User extends User with MetaMegaProtoUser[User] {
   // email feature, the emailFrom Lift generates would be
   // "noreply@192.168.0.10", which would be a problem.
   override def emailFrom = "noreply@lifthub.net"
+
+  //
+  override def beforeUpdate = List(user => {
+    //If the key is different from the current one.
+    if (user.sshKey.is.length > 0 && user.sshKey.dirty_?) {
+      println("new ssh key!" + user.sshKey)
+      user.registerSshKey
+    } else {
+      println("ssh key hasn't been changed.")
+    }
+  })
+
 }
 
 /**
@@ -47,6 +62,12 @@ class User extends MegaProtoUser[User] {
     override def textareaRows  = 10
     override def textareaCols = 50
     override def displayName = "SSH public key"
+  }
+
+  def registerSshKey: Unit = {
+    GitosisHelper.createSshKey(this)
+    GitosisHelper.gitAddSshKey(this)
+    GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id, true)
   }
 }
 

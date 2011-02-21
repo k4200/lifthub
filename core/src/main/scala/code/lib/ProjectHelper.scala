@@ -38,6 +38,7 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
   val deployDirPath = basePath + "/userwebapps/" + projectName
   val confPath = basePath + "/etc/lifthub/" + projectName + ".xml"
   val templatePath = basePath + "/etc/jetty.xml.tmpl"
+  val stopPort = port + 1000 //TODO
 
   def writeConfFile: Boolean = {
     FileUtils.printToFile(confPath)(writer => {
@@ -280,7 +281,6 @@ object SbtHelper {
   def deploy(project: Project): Box[String] = {
     import org.apache.commons.io.FileUtils
     //TODO Hot deploy.
-    //TODO Write test cases.
     val pi = ProjectInfo(project)
     val si = ServerInfo(project)
     tryo {

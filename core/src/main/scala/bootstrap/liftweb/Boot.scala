@@ -61,9 +61,9 @@ class Boot {
       List(
         Menu.i("Home") / "index" >> User.AddUserMenusAfter,
         Menu.i("Project") / "project" submenus
-          Project.menus :::
-          List(Menu.i("Operations") / "projects" / "operate") :::
-          UserDatabase.menus
+          Project.menus
+          ::: List(Menu.i("Operations") / "projects" / "operate")
+          //::: UserDatabase.menus
       ): _* )
 
       // more complex because this menu allows anything in the

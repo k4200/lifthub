@@ -1,6 +1,10 @@
 package net.lifthub {
 package serverl {
 
+import net.liftweb.util.Helpers._
+import net.liftweb.common._
+import net.liftweb.mapper._
+
 import akka.actor.Actor
 import akka.actor.Actor._
 import akka.config.Supervision._
@@ -11,7 +15,39 @@ import java.util.concurrent.ThreadPoolExecutor._
 
 import net.lifthub.common.event._
 import net.lifthub.common.ActorConfig._
+import net.lifthub.lib.ServerInfo
+import net.lifthub.model.Project
 
+
+object ServerManagerCore {
+  def start(server: ServerInfo) = {
+    val command = List("java", "-DSTOP.PORT=" + server.stopPort,
+                       " -DSTOP.KEY=" + server.projectName,
+                       "-jar", "start.jar",
+                       server.confPath)
+    execute(server, command)
+  }
+
+  def execute(server: ServerInfo, command: List[String]) = {
+    val pb = (new java.lang.ProcessBuilder(command: _*)) directory
+      new java.io.File(server.basePath)
+    tryo {
+      // Don't wait for the process to finish.
+      val proc = pb.start
+      Full("Maybe started.")
+    } openOr {
+      Failure("failed to start 'sbt %s'.".format(command))
+    }
+  }
+
+  def stop(server: ServerInfo) = {
+    val command = List("java", "-DSTOP.PORT=" + server.stopPort,
+                       " -DSTOP.KEY=" + server.projectName,
+                       "-jar", "start.jar",
+                       "--stop")
+    execute(server, command)
+  }
+}
 
 class ProjectStatusMonitor extends Actor {
   // max 5 retries, within 5000 millis
@@ -28,8 +64,16 @@ class ProjectStatusMonitor extends Actor {
 
   def receive = {
     case Start(projectId) => 
+      Project.find(By(Project.id, projectId)) match {
+        case Full(project) =>
+          val server = ServerInfo(project)
+          ServerManagerCore.start(server)
+          self.reply(Response.STARTED)
+        case _ =>
+          //TODO ERROR  
+          self.reply(Response.STARTED)
+      }
       println("starting " + projectId)
-      self.reply(Response.STARTED)
     case Stop(projectId) => 
       println("stopping " + projectId)
       self.reply(Response.STOPPED)

@@ -28,13 +28,15 @@ with AggregateFunctions[Project]
       = v.asInstanceOf[StatusVal]
   }
 
+  // Constant values
   //TODO should vary depending on the user (ie. payment status).
   val MAX_NUM_PROJECTS = 1
+  val PORT_RANGE = (9000, 9999)
 
   override def dbTableName = "projects"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
-  override def validation = List(checkNumberOfDatabases)
+  override def validation = List(checkNumberOfDatabases, checkSshKey)
 
   override def beforeCreate = List(
     checkNumberOfDatabases,
@@ -120,10 +122,10 @@ with AggregateFunctions[Project]
     }
   })
 
-  def getAvailablePort: Int = {
+  private[model] def getAvailablePort: Int = {
     val maxport = max(port)
     if (maxport != 0) maxport.toInt + 1
-    else 9000
+    else PORT_RANGE._1
   }
 }
 
@@ -183,6 +185,7 @@ with UserEditableKeyedMapper[Long, Project]
 
   import Project.Status
   object status extends MappedEnum[Project, Status.type](this, Status) {
+    override def dbDisplay_? = false
     override def dbColumnName = "status"
   }
 }
