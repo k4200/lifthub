@@ -18,13 +18,17 @@ extends CRUDify [KeyType, CrudType] {
   self: CrudType with KeyedMetaMapper[KeyType, CrudType] =>
 
   //TODO Implement the other actions.
+  //TODO Write test cases.
 
   override protected def doDeleteSubmit(item: TheCrudType, from: String)() = {
     self.userObject.currentUserId match {
       case Full(userId) => 
-        if(userId == item.userId.is) {
+        if(tryo{userId.toLong}.getOrElse(-1) == item.userId.is) {
 	  S.notice(S ? "Deleted")
 	  item.delete_!
+	} else {
+	  println("You (user ID %s) are not the item %d's owner."
+                  .format(userId, item.userId.is))
 	}
         S.redirectTo(from)
       case _ =>  S.redirectTo("/user_mgt/login")

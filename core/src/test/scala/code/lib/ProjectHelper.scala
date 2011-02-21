@@ -33,6 +33,50 @@ object ProjectHelperSpec extends Specification {
   }
 
   // -------------
+  "ServerInfo" should {
+    val si = ServerInfo("foo", 9000, "6")
+    "contain correct paths." in {
+      si.deployDirPath mustEqual "/home/lifthubuser/servers/jetty-6/userwebapps/foo"
+      si.confPath mustEqual "/home/lifthubuser/servers/jetty-6/etc/lifthub/foo.xml"
+    }
+
+    "generate a conf string" in {
+      val portPattern = "#port#".r
+      val namePattern = "#name#".r
+      portPattern.findFirstIn(si.confString) must equalTo(None)
+      namePattern.findFirstIn(si.confString) must equalTo(None)
+    }
+
+    "generate a conf file" in {
+      si.writeConfFile mustBe true
+    }
+
+  }
+  // -------------
+  "NginxConf" should {
+    val nginxConf = NginxConf("foo", 9000)
+    "contain correct paths." in {
+      nginxConf.confPath mustEqual "/home/lifthub/nginx/conf.d/foo.conf"
+      nginxConf.logPath mustEqual "/home/lifthub/nginx/logs/foo.access.log"
+    }
+    "be instanciated out of Project" in {
+      //val project = Project(....)
+      //val nc = NginxConf(project)
+      true mustBe true
+    }
+    "generate a conf file" in {
+      nginxConf.confString mustEqual
+"""    server {
+        server_name foo.lifthub.net;
+        access_log /home/lifthub/nginx/logs/foo.access.log main;
+        location / {
+            proxy_pass   http://127.0.0.1:9000/;
+        }
+    }
+"""
+    }
+  }
+  // -------------
 
   "ProjectInfo"should {
     val pi = ProjectInfo("foo", TemplateType.Mvc, "2.2")
@@ -43,8 +87,11 @@ object ProjectHelperSpec extends Specification {
     "contain correct paths" in {
       pi.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_mvc"
       pi.path mustEqual "/home/lifthub/userprojects/foo"
-      //pi.gitRepoRemote mustEqual "gitosis@lifthub.net:foo.git"
-      pi.gitRepoRemote mustEqual "gitosis@www.lifthub.net:foo.git"
+      pi.gitRepoRemote mustEqual "gitosis@lifthub.net:foo.git"
+
+      pi.propsPath mustEqual "/home/lifthub/userprojects/foo/src/main/resources/default.props"
+      pi.warPath mustEqual "/home/lifthub/userprojects/foo/target/scala_2.8.1/lift-sbt-template_2.8.1-0.1.war"
+
     }
     "be instanciated out of Project" in {
       val project = Project.create
@@ -71,6 +118,7 @@ object ProjectHelperSpec extends Specification {
 //       project.liftVersion.set("2.2")
 //       project.templateType.set(TemplateType.Xhtml)
 //       SbtHelper.update(project)
+      true mustBe true
     }
   }
 

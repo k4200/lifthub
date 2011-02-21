@@ -105,6 +105,12 @@ with UserEditableKeyedMapper[Long, UserDatabase] {
   var _plainPassword: Box[String] = Empty
   protected def plainPassword_=(value: String) = _plainPassword = Full(value)
   def plainPassword = _plainPassword
+
+  //operations
+  def dropDatabase = {
+    val dbHelper = DbHelper.get(databaseType)
+    dbHelper.dropDatabase(this)
+  }
 }
 
 

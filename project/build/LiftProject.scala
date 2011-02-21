@@ -1,16 +1,20 @@
 import sbt._
 
+/**
+ * Main project class.
+ */
 class LifthubProject(info: ProjectInfo) extends ParentProject(info) {
   // def project(path: Path, name: String, deps: Project*): Project
   lazy val core = project("core", "Lifthub core", new CoreProject(_))
   lazy val web = project("web", "Lifthub web", new LiftProject(_), core)
-  lazy val bgtasks = project("bgtasks", "Lifthub background tasks", core)
+  lazy val bgtasks = project("bgtasks", "Lifthub bg tasks", new BgProject(_), core)
 
   override def parallelExecution = true
   
 }
 
-protected class CoreProject(info: ProjectInfo) extends DefaultProject(info) {
+protected class CoreProject(info: ProjectInfo) extends DefaultProject(info)
+with AkkaProject {
   val liftVersion = "2.2"
 
   val jGitRepo = "JGit" at "http://download.eclipse.org/jgit/maven"
@@ -32,6 +36,8 @@ protected class CoreProject(info: ProjectInfo) extends DefaultProject(info) {
     //"org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" sources
     //"com.h2database" % "h2" % "1.2.138"
   ) ++ super.libraryDependencies
+
+  val akkaRemote = akkaModule("remote")
 }
 
 protected class LiftProject(info: ProjectInfo)
@@ -44,4 +50,10 @@ extends DefaultWebProject(info) {
   // If you're using JRebel for Lift development, uncomment
   // this line
   // override def scanDirectories = Nil
+}
+
+protected class BgProject(info: ProjectInfo) extends DefaultProject(info)
+with AkkaProject {
+  //override def libraryDependencies = Set(
+  //) ++ super.libraryDependencies
 }

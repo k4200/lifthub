@@ -2,6 +2,7 @@ package net.lifthub {
 package lib {
 
 import net.lifthub.model.User
+import net.lifthub.model.Project
 
 import FileUtils._
 
@@ -30,12 +31,75 @@ object TemplateType extends Enumeration {
     = v.asInstanceOf[TemplateTypeVal]
 }
 
+case class ServerInfo(projectName: String, port: Int, version: String) {
+  //Paths
+  val serverName = "jetty"
+  val basePath = "/home/lifthubuser/servers/%s-%s".format(serverName, version)
+  val deployDirPath = basePath + "/userwebapps/" + projectName
+  val confPath = basePath + "/etc/lifthub/" + projectName + ".xml"
+  val templatePath = basePath + "/etc/jetty.xml.tmpl"
+
+  def writeConfFile: Boolean = {
+    FileUtils.printToFile(confPath)(writer => {
+      writer.write(confString)
+    })
+  }
+
+  def confString: String = {
+    import scala.io.Source
+    val tmpl = Source.fromFile(templatePath)
+    val portPattern = "#port#".r
+    val namePattern = "#name#".r
+    namePattern.replaceAllIn(
+      portPattern.replaceAllIn(tmpl.mkString, port.toString),
+      projectName)
+  }
+}
+
+object ServerInfo {
+  def apply(project: Project): ServerInfo = {
+    this(project.name, project.port, "6")
+  }
+}
+
+// ------------------------------------------------
+case class NginxConf(projectName: String, port: Int) {
+  val confPath = "/home/lifthub/nginx/conf.d/%s.conf".format(projectName)
+  val logPath = "/home/lifthub/nginx/logs/%s.access.log".format(projectName)
+
+  def writeToFile(): Boolean = {
+    FileUtils.printToFile(confPath)(writer => {
+      writer.write(confString)
+    })
+  }
+
+  def confString: String = {
+    """    server {
+      |        server_name %s.lifthub.net;
+      |        access_log %s main;
+      |        location / {
+      |            proxy_pass   http://127.0.0.1:%d/;
+      |        }
+      |    }
+      |"""
+      .stripMargin.format(projectName, logPath, port)
+  }
+}
+object NginxConf {
+  def apply(project: Project): NginxConf = {
+    this(project.name, project.port.is)
+  }
+}
+
+// ------------------------------------------------
 /**
  * Project information
  * TODO Add databaseType: MySQL, PostgreSQL etc.
  * TODO Merge this into Project?
  */
 case class ProjectInfo (name: String, templateType: TemplateType.Value, version: String) {
+  val SCALA_VER = "2.8.1"
+
   //import ProjectInfo._
   def templatePath: String = ProjectInfo.templateBasePath + "/lift_" +
     version + "_sbt/" + templateType.dirName
@@ -45,9 +109,10 @@ case class ProjectInfo (name: String, templateType: TemplateType.Value, version:
    */
   def propsPath = path + "/src/main/resources/default.props"
 
-  //TODO
-  //val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
-  val gitRepoRemote: String = "gitosis@www.lifthub.net:" + name + ".git"
+  def warPath = path + ("/target/scala_%s/lift-sbt-template_%s-0.1.war"
+                        .format(SCALA_VER, SCALA_VER))
+
+  val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
 }
 object ProjectInfo {
   //Paths
@@ -55,7 +120,6 @@ object ProjectInfo {
   val templateBasePath = basePath + "/projecttemplates"
   val projectBasePath = basePath + "/userprojects"
 
-  import net.lifthub.model.Project
   def apply(project: Project): ProjectInfo = {
     this(project.name, project.templateType.is, "2.2")
   }
@@ -82,7 +146,6 @@ object GitosisHelper {
   val keydir = Path(gitosisAdminPath, keydirName)
   lazy val conf = Path(gitosisAdminPath, "gitosis.conf")
   val gitAdminRepoRemote = "gitosis@localhost:gitosis-admin.git"
-  //val gitAdminRepoRemote = "gitosis@localhost:gitosis-admin.git"
 
   def keyFileName(user: User): String = user.email + ".pub"
   def keyFile(user: User): Path = keydir + keyFileName(user)
@@ -206,22 +269,43 @@ object SbtHelper {
   import net.lifthub.model.Project
   //TODO COR?
   def update(project: Project): Box[String] = {
+    //TODO Shold be done at the same time as some other actions.
+    runCommand(project, "update")
+  }
+
+  def makePackage(project: Project): Box[String] = {
+    runCommand(project, "package")
+  }
+
+  def deploy(project: Project): Box[String] = {
+    import org.apache.commons.io.FileUtils
+    //TODO Hot deploy.
+    //TODO Write test cases.
     val pi = ProjectInfo(project)
-    println("pi.path: " + pi.path)
-    val pb = (new java.lang.ProcessBuilder("./sbt", "update")) directory pi.path
+    val si = ServerInfo(project)
     tryo {
-      val proc = pb.start
-      if (proc.waitFor == 0) {
-	Full("'sbt update' succeeded.")
-      } else {
-	Failure("'sbt update' returned non-zero.")
-      }
+      FileUtils.copyFile(pi.warPath, si.deployDirPath + "/ROOT.war")
+      Full("Project %s successfully deployed.".format(project.name))
     } openOr {
-      Failure("failed to start 'sbt update'.")
+      Failure("Failed to deploy.")
     }
   }
 
-  def compile = {
+  def runCommand(project: Project, command: String): Box[String] = {
+    val pi = ProjectInfo(project)
+    println("pi.path: " + pi.path) //Debug
+    val pb = (new java.lang.ProcessBuilder("./sbt", command)) directory pi.path
+    tryo {
+      val proc = pb.start
+      val resultCode = proc.waitFor
+      if (resultCode == 0) {
+	Full("'sbt %s' succeeded.".format(command))
+      } else {
+	Failure("'sbt %s' returned %d.".format(command, resultCode))
+      }
+    } openOr {
+      Failure("failed to start 'sbt %s'.".format(command))
+    }
   }
 
   def main(args: Array[String]) {
@@ -255,7 +339,7 @@ object ProjectHelper {
   }
 
   /**
-   *
+   * 
    */
   def createProject(projectInfo: ProjectInfo, user: User) = {
     addUserToGitosis(projectInfo, user)

@@ -28,27 +28,67 @@ with AggregateFunctions[Project]
       = v.asInstanceOf[StatusVal]
   }
 
+  //TODO should vary depending on the user (ie. payment status).
+  val MAX_NUM_PROJECTS = 1
 
   override def dbTableName = "projects"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
-  override def beforeCreate = List(project =>  {
-    //TODO Check check how many projects the user owns already.
+  override def validation = List(checkNumberOfDatabases)
 
-    project.port(getAvailablePort)
+  override def beforeCreate = List(
+    checkNumberOfDatabases,
+    setPort,
+    createDatabaseIfNone
+  )
 
+  private def checkNumberOfDatabases(project: Project): List[FieldError] = {
+    User.currentUserId match {
+      case Full(userId) =>
+        if (count(By(Project.userId, userId.toLong)) < MAX_NUM_PROJECTS) {
+          List(FieldError(Project.name, Text("You can't create more than 1 project.")))
+        } else {
+	  Nil
+	}
+      case _ =>
+        List(FieldError(Project.name,
+                        Text(S.??("validation.general.require.login"))))
+    }
+  }
+
+  private def checkSshKey(project: Project): List[FieldError] = {
     User.currentUser match {
       case Full(user) =>
-	if(project.userId == 0) {
+        if(user.sshKey.is.length == 0) {
+          List(FieldError(Project.name, Text("You need to register your SSH key first.")))
+        } else {
+          Nil
+	}
+      case _ =>
+        List(FieldError(Project.name,
+                        Text(S.??("validation.general.require.login"))))
+    }
+  }
+
+  private def setPort(project: Project): Unit = {
+    project.port(getAvailablePort)
+  }
+
+  private def createDatabaseIfNone(project: Project): Unit = {
+    User.currentUser match {
+      case Full(user) =>
+	if(project.database == 0) {
           val dbInfo = UserDatabase.createFromProject(project)
           dbInfo.userId(user.id)
           dbInfo.save
           project.database(dbInfo)
           project.userId(user.id)
 	}
-      case _ => println("user is not logged in.") //TODO
+      case _ =>
+        List(FieldError(Project.name,
+                        Text(S.??("validation.general.require.login"))))
     }
-  })
+  }
 
   override def afterCreate = List(project =>  {
     (for(dbInfo <-project.database.obj;
@@ -56,7 +96,14 @@ with AggregateFunctions[Project]
     yield {
       val projectInfo = ProjectInfo(project)
       ProjectHelper.createProject(projectInfo, user)
+      //FIXME The file won't be added to git.
       ProjectHelper.createProps(projectInfo, dbInfo)
+      // Create a config file for jetty.
+      val serverInfo = ServerInfo(project)
+      serverInfo.writeConfFile
+      //serverInfo
+      val nginxConf = NginxConf(project)
+      nginxConf.writeToFile
     }) getOrElse {
       println("error...") //TODO rollback
     }
@@ -64,6 +111,13 @@ with AggregateFunctions[Project]
 
   override def afterDelete = List(project => {
     //TODO Delete project files.
+    println("afterDelete")
+
+    for(database <- project.database.obj)
+    yield {
+      database.dropDatabase
+      database.delete_!
+    }
   })
 
   def getAvailablePort: Int = {

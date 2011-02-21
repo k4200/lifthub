@@ -15,6 +15,7 @@ import _root_.java.util.Date
 
 import net.lifthub.model.Project
 import net.lifthub.lib._
+import net.lifthub.client._
 
 class ProjectOperations {
   def listAll: CssBindFunc = {
@@ -23,7 +24,7 @@ class ProjectOperations {
 	".name *" #> p.name &
         ".update *" #> SHtml.ajaxButton(Text("Update"), () => update(p)) &
         ".build *" #> SHtml.ajaxButton(Text("Build"), () => build(p)) &
-        ".process *" #> "" &
+        ".process *" #> SHtml.ajaxButton(Text("Start"), () => process(p)) &
         ".process [href]" #> ""
       )
   }
@@ -38,10 +39,19 @@ class ProjectOperations {
   }
 
   def build(project: Project): JsCmd = {
-    SbtHelper.update(project) match {
+    SbtHelper.makePackage(project) match {
       case Full(x) => S.notice(x)
       case Failure(x, _, _) => S.error(x.toString)
       case Empty => S.error("build failed.")
+    }
+    Noop
+  }
+
+  def process(project: Project): JsCmd = {
+    ServerManagerClient.startServer(project) match {
+      case Full(x) => S.notice(x)
+      case Failure(x, _, _) => S.error(x.toString)
+      case Empty => S.error("unknown error...")
     }
     Noop
   }

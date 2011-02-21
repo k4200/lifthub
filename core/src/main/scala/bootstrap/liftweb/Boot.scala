@@ -36,10 +36,13 @@ class Boot {
       //DbHelper.addDbHelper(DbType.PostgreSql, PostgreSqlHelper)
 
       DbHelper.all.foreach( helper => {
-        //This may throw an Exception.
-        val vendor = helper.vendor.get
-        LiftRules.unloadHooks.append(vendor.closeAllConnections_! _)
-        DB.defineConnectionManager(helper.connectionIdentifier, vendor)
+        helper.vendor match {
+          case Full(vendor) =>
+            LiftRules.unloadHooks.append(vendor.closeAllConnections_! _)
+            DB.defineConnectionManager(helper.connectionIdentifier, vendor)
+          case Failure(x, _, _) => println(x)
+          case Empty => println("helper.vendor is empty...")
+        }
       })
     }
 
