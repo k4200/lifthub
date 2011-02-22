@@ -13,7 +13,6 @@ import akka.dispatch.Dispatchers
 
 import java.util.concurrent.ThreadPoolExecutor._
 
-import net.lifthub.common.event._
 import net.lifthub.common.ActorConfig._
 import net.lifthub.lib.ServerInfo
 import net.lifthub.model.Project
@@ -23,12 +22,12 @@ import net.lifthub.model.Project
 import bootstrap.liftweb.Boot
 
 object ServerManagerCore {
+  val executor = actorOf[JettyExecutor]
+  executor.start
+
+  import internalevent._
   def start(server: ServerInfo) = {
-    val command = List("java", "-DSTOP.PORT=" + server.stopPort,
-                       " -DSTOP.KEY=" + server.projectName,
-                       "-jar", "start.jar",
-                       server.confPath)
-    execute(server, command)
+    executor ! Start(server)
   }
 
 //   def execute2(server: ServerInfo, command: List[String]) = {
@@ -71,6 +70,7 @@ class ServerManager extends Actor {
       .setRejectionPolicy(new CallerRunsPolicy) // OK?
       .build
 
+  import net.lifthub.common.event._
   def receive = {
     case Start(projectId) => 
       Project.find(By(Project.id, projectId)) match {
