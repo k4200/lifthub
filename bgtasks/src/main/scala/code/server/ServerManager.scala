@@ -1,5 +1,5 @@
 package net.lifthub {
-package serverl {
+package server {
 
 import net.liftweb.util.Helpers._
 import net.liftweb.common._
@@ -18,6 +18,8 @@ import net.lifthub.common.ActorConfig._
 import net.lifthub.lib.ServerInfo
 import net.lifthub.model.Project
 
+//import org.apache.commons.exec._
+
 import bootstrap.liftweb.Boot
 
 object ServerManagerCore {
@@ -28,6 +30,12 @@ object ServerManagerCore {
                        server.confPath)
     execute(server, command)
   }
+
+//   def execute2(server: ServerInfo, command: List[String]) = {
+//     val cmdLine = new CommandLine(command.head)
+//     command.tail.foreach(cmdLine.addArgument _)
+//     val resultHandler = new DefaultExecuteResultHandler()
+//   }
 
   def execute(server: ServerInfo, command: List[String]) = {
     val pb = (new java.lang.ProcessBuilder(command: _*)) directory
@@ -50,7 +58,7 @@ object ServerManagerCore {
   }
 }
 
-class ProjectStatusMonitor extends Actor {
+class ServerManager extends Actor {
   // max 5 retries, within 5000 millis
   //self.faultHandler = OneForOneStrategy(List(classOf[Exception]), 5, 5000)
 
@@ -94,7 +102,7 @@ object ServerManagerRunner {
 
   def run = {
     Actor.remote.start(SERVER_HOST, SERVER_PORT)
-    Actor.remote.register(REGISTER_NAME, actorOf[ProjectStatusMonitor])
+    Actor.remote.register(REGISTER_NAME, actorOf[ServerManager])
   }
 
   def main(args: Array[String]) = {

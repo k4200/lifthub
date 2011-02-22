@@ -54,6 +54,8 @@ extends DefaultWebProject(info) {
 
 protected class BgProject(info: ProjectInfo) extends DefaultProject(info)
 with AkkaProject {
-  //override def libraryDependencies = Set(
-  //) ++ super.libraryDependencies
+  override def libraryDependencies = Set(
+    "org.mortbay.jetty" % "jetty" % "6.1.26"
+    //"org.apache.commons" % "commons-exec" % "1.1"
+  ) ++ super.libraryDependencies
 }

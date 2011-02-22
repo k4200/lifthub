@@ -6,23 +6,24 @@ package common.event {
 
 sealed trait Event
 
-//@BeanInfo
+/**
+ * Starts the server of the project of the given ID.
+ */
 case class Start(projectId: Long) extends Event
-//with Serializable.ScalaJSON[Start]
-
-//@BeanInfo
+/**
+ * Stops the server of the project of the given ID.
+ */
 case class Stop(projectId: Long) extends Event
-//with Serializable.ScalaJSON[Stop]
 
 
-//@BeanInfo
-case class StopServer() extends Event
-//with Serializable.ScalaJSON[StopServer]
 
-
+/**
+ * Responses from ServerManager to client
+ */
 object Response {
   val STOPPED = "Stopped"
   val STARTED = "Started"
+  val FAILED = "Failed"
 }
 
 

@@ -6,6 +6,7 @@ import scala.xml.{ NodeSeq, Text }
 import _root_.net.liftweb.mapper._
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._
+import Helpers._
 import net.liftweb.http._
 import net.liftweb.sitemap._
 import Loc._
@@ -49,21 +50,75 @@ object User extends User with MetaMegaProtoUser[User] {
 
   // ---------------- invitation -----------------------
   // https://gist.github.com/780788
-  def invitationSuffix = "invitation"
-  lazy val invitationPath = thePath(invitationSuffix)
 
-  def invitationMenuLoc: Box[Menu] =
-    Full(Menu(Loc("Invitation", (invitationPath, true), S.??("invitation"), invitationMenuLocParams)))
+  // Disable the user creation menu.
+  override def createUserMenuLoc: Box[Menu] = Empty
 
-  protected def invitationMenuLocParams: List[LocParam[Unit]] =
+  override lazy val sitemap: List[Menu] =
+    List(loginMenuLoc, logoutMenuLoc, createUserMenuLoc,
+       lostPasswordMenuLoc, resetPasswordMenuLoc,
+       editUserMenuLoc, changePasswordMenuLoc,
+       validateUserMenuLoc, inviteMenuLoc).flatten(a => a)
+
+  override lazy val ItemList: List[MenuItem] =
+    List(MenuItem(S.??("sign.up"), signUpPath, false),
+       MenuItem(S.??("log.in"), loginPath, false),
+       MenuItem(S.??("lost.password"), lostPasswordPath, false),
+       MenuItem("", passwordResetPath, false),
+       MenuItem(S.??("change.password"), changePasswordPath, true),
+       MenuItem(S.??("log.out"), logoutPath, true),
+       MenuItem(S.??("edit.profile"), editPath, true),
+       MenuItem("", validateUserPath, false),
+       MenuItem(S.??("invite"), invitePath, false))
+
+
+  def inviteSuffix = "invite"
+  lazy val invitePath = thePath(inviteSuffix)
+
+  def inviteMenuLoc: Box[Menu] =
+    Full(Menu(Loc("Invite", invitePath, S.??("invite"), inviteMenuLocParams)))
+
+  protected def inviteMenuLocParams: List[LocParam[Unit]] =
     //snarfLastItem is defined in ProtoUser.
-    //Template(() => wrapIt(invitation(snarfLastItem))) ::
-    Template(() => invitation(S.request)) ::
-    If(notLoggedIn_? _, S.??("logout.first")) :: //TODO
+    //Template(() => wrapIt(invite(snarfLastItem))) ::
+    //Template(() => invite(S.request)) ::
+    Template(() => wrapIt(invite(S.request))) ::
+    If(superUser_? _, S.??("requires.superuser")) ::
     Nil
 
-  def invitation(request: Box[Req]): NodeSeq = {
-    Text("aa")
+  /**
+   * 
+   */
+  def invite(request: Box[Req]): NodeSeq = {
+    val theUser = createNewUserInstance
+    def testInvite() {
+      validateInvite(theUser) match {
+        case Nil =>
+          theUser.save
+          sendValidationEmail(theUser)
+          S.notice(S.??("invite.finish"))
+          S.redirectTo(homePage)
+        case xs => S.error(xs) ; innerInvite _
+      }
+    }
+    def innerInvite = bind("user",
+                      inviteXhtml(theUser),
+                      "submit" -> SHtml.submit(S.??("invite"), testInvite _))
+    innerInvite
+  }
+
+  def validateInvite(user: TheUserType): List[FieldError] = user.validate
+
+  def inviteXhtml(user: TheUserType) = {
+    // The same code as the signupXhtml except the label.
+    //TODO How to specify password?
+    (<form method="post" action={S.uri}>
+       <table>
+         <tr><td colspan="2">{ S.??("invite") }</td></tr>
+          {localForm(user, false, signupFields)}
+         <tr><td>&nbsp;</td><td><user:submit/></td></tr>
+        </table>
+     </form>)
   }
 }
 
@@ -90,12 +145,19 @@ class User extends MegaProtoUser[User] {
     override def displayName = "SSH public key"
   }
 
+  /**
+   *
+   */
   def registerSshKey: Unit = {
+    //TODO This doesn't seem to register a new key to the repository.
     GitosisHelper.createSshKey(this)
     GitosisHelper.gitAddSshKey(this)
     GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id, true)
   }
 
+  /**
+   * 
+   */
   def maxNumProjects: Int = {
     if(this.superUser_?) 10
     else MAX_NUM_PROJECTS
