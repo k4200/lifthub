@@ -391,6 +391,29 @@ object ProjectHelper {
     true
   }
 
+  def pullProject(project: Project): Boolean = {
+    val projectInfo = ProjectInfo(project)
+    val builder = new FileRepositoryBuilder()
+    val projectRepo = 
+      builder.setGitDir(projectInfo.path + "/" + Constants.DOT_GIT)
+      .readEnvironment().findGitDir().build()
+    
+    try {
+//       val git = Git.init.setDirectory(new File(projectInfo.path)).call()
+      val git = new Git(projectRepo)
+
+//       val refSpec = new RefSpec("refs/heads/master")
+//       git.push().setRefSpecs(refSpec).setDryRun(dryRun).setRemote(projectInfo.gitRepoRemote).call()
+      git.pull().call()
+    } catch {
+      case e: Exception  =>
+        e.printStackTrace
+        println(e.getCause)
+        return false
+    }
+    true
+  }
+
   import net.lifthub.model.UserDatabase
   /**
    * Creates a properties file for db connection

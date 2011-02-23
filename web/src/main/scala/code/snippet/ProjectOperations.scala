@@ -22,12 +22,22 @@ class ProjectOperations {
     ".project *" #> 
       Project.findAllOfOwner.map(p =>
 	".name *" #> p.name &
+        ".pull *" #> SHtml.ajaxButton(Text("Pull"), () => pull(p)) &
         ".update *" #> SHtml.ajaxButton(Text("Update"), () => update(p)) &
         ".build *" #> SHtml.ajaxButton(Text("Build"), () => build(p)) &
         ".deploy *" #> SHtml.ajaxButton(Text("Deploy"), () => deploy(p)) &
         ".process *" #> SHtml.ajaxButton(Text("Start"), () => process(p)) &
         ".process [href]" #> ""
       )
+  }
+
+  def pull(project: Project): JsCmd = {
+    if(ProjectHelper.pullProject(project)) {
+      S.notice("git pull succeeded.")
+    } else {
+      S.error("git pull failed.")
+    }
+    Noop
   }
 
   //TODO repetition

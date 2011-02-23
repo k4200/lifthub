@@ -30,6 +30,10 @@ object ServerManagerCore {
     executor ! Start(server)
   }
 
+  def stop(server: ServerInfo) = {
+    executor ! Stop(server)
+  }
+
 //   def execute2(server: ServerInfo, command: List[String]) = {
 //     val cmdLine = new CommandLine(command.head)
 //     command.tail.foreach(cmdLine.addArgument _)
@@ -48,13 +52,13 @@ object ServerManagerCore {
     }
   }
 
-  def stop(server: ServerInfo) = {
-    val command = List("java", "-DSTOP.PORT=" + server.stopPort,
-                       " -DSTOP.KEY=" + server.projectName,
-                       "-jar", "start.jar",
-                       "--stop")
-    execute(server, command)
-  }
+//   def stop(server: ServerInfo) = {
+//     val command = List("java", "-DSTOP.PORT=" + server.stopPort,
+//                        " -DSTOP.KEY=" + server.projectName,
+//                        "-jar", "start.jar",
+//                        "--stop")
+//     execute(server, command)
+//   }
 }
 
 class ServerManager extends Actor {

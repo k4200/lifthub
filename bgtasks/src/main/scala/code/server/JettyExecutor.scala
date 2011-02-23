@@ -20,7 +20,7 @@ class JettyExecutor extends Actor {
     case Start(serverInfo) =>
       start(serverInfo)
     case Stop(serverInfo) =>
-      println("stopped.")
+      stop(serverInfo)
   }
 
   def start(serverInfo: ServerInfo) = {
@@ -30,6 +30,7 @@ class JettyExecutor extends Actor {
   }
 
   def stop(serverInfo: ServerInfo) = {
+    server.stop
   }
 
 }
