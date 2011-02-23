@@ -377,13 +377,18 @@ object ProjectHelper {
     
     try {
       val git = Git.init.setDirectory(new File(projectInfo.path)).call()
-      //TODO
+
+      //
       val config = projectRepo.getConfig
       val remoteConfig = new RemoteConfig(config, "origin")
       val refSpec = new RefSpec("refs/heads/master")
       remoteConfig.addPushRefSpec(refSpec)
+      remoteConfig.addFetchRefSpec(refSpec)
       remoteConfig.addURI(new URIish(projectInfo.gitRepoRemote))
       remoteConfig.update(config)
+
+      config.setString("branch", "master", "remote", "origin")
+      config.setString("branch", "master", "merge", "refs/heads/master")
       config.save
 
       git.add().addFilepattern(".").call()
