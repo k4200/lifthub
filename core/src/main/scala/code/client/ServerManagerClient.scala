@@ -29,8 +29,11 @@ object ServerManagerClient {
   }
 
   def stopServer(project: Project): Box[String] = {
-    //TODO implement this.
-    Empty
+    server !! Stop(project.id.is) match {
+      case Some(x) if x == Response.STOPPED  =>
+        Full("successfully stopped! " + project.id)
+      case _ => Failure("failed to stop the server for " + project.id)
+    }
   }
 }
 
