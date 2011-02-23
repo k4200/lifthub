@@ -11,7 +11,7 @@ import org.eclipse.jgit._
 import lib._
 import api.Git
 import storage.file.{FileRepository, FileRepositoryBuilder}
-import transport.{Transport, RefSpec, RemoteConfig}
+import transport.{Transport, RefSpec, RemoteConfig, URIish}
 
 import java.io._
 
@@ -377,10 +377,18 @@ object ProjectHelper {
     
     try {
       val git = Git.init.setDirectory(new File(projectInfo.path)).call()
+      //TODO
+      val config = projectRepo.getConfig
+      val remoteConfig = new RemoteConfig(config, "origin")
+      val refSpec = new RefSpec("refs/heads/master")
+      remoteConfig.addPushRefSpec(refSpec)
+      remoteConfig.addURI(new URIish(projectInfo.gitRepoRemote))
+      remoteConfig.update(config)
+      config.save
+
       git.add().addFilepattern(".").call()
       git.commit().setMessage("New project").call()
 
-      val refSpec = new RefSpec("refs/heads/master")
       git.push().setRefSpecs(refSpec).setDryRun(dryRun).setRemote(projectInfo.gitRepoRemote).call()
     } catch {
       case e: Exception  =>
@@ -399,7 +407,6 @@ object ProjectHelper {
       .readEnvironment().findGitDir().build()
     
     try {
-//       val git = Git.init.setDirectory(new File(projectInfo.path)).call()
       val git = new Git(projectRepo)
 
 //       val refSpec = new RefSpec("refs/heads/master")

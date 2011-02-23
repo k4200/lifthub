@@ -19,16 +19,26 @@ import net.lifthub.client._
 
 class ProjectOperations {
   def listAll: CssBindFunc = {
+    import net.lifthub.model.Project._
     ".project *" #> 
-      Project.findAllOfOwner.map(p =>
+      Project.findAllOfOwner.map(p => {
+	val process = {
+          if (p.status == Status.Stopped) {
+            SHtml.ajaxButton(Text("Start"), () => start(p))
+          } else if (p.status == Status.Running) {
+            SHtml.ajaxButton(Text("Stop"), () => stop(p))
+          } else {
+            Text("")
+          }
+	}
 	".name *" #> p.name &
         ".pull *" #> SHtml.ajaxButton(Text("Pull"), () => pull(p)) &
         ".update *" #> SHtml.ajaxButton(Text("Update"), () => update(p)) &
         ".build *" #> SHtml.ajaxButton(Text("Build"), () => build(p)) &
         ".deploy *" #> SHtml.ajaxButton(Text("Deploy"), () => deploy(p)) &
-        ".process *" #> SHtml.ajaxButton(Text("Start"), () => process(p)) &
+        ".process *" #> process &
         ".process [href]" #> ""
-      )
+      })
   }
 
   def pull(project: Project): JsCmd = {
@@ -68,8 +78,17 @@ class ProjectOperations {
     Noop
   }
 
-  def process(project: Project): JsCmd = {
+  def start(project: Project): JsCmd = {
     ServerManagerClient.startServer(project) match {
+      case Full(x) => S.notice(x)
+      case Failure(x, _, _) => S.error(x.toString)
+      case Empty => S.error("unknown error...")
+    }
+    Noop
+  }
+
+  def stop(project: Project): JsCmd = {
+    ServerManagerClient.stopServer(project) match {
       case Full(x) => S.notice(x)
       case Failure(x, _, _) => S.error(x.toString)
       case Empty => S.error("unknown error...")

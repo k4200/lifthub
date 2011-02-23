@@ -75,23 +75,35 @@ class ServerManager extends Actor {
       .build
 
   import net.lifthub.common.event._
+  import net.lifthub.model.Project._
   def receive = {
     case Start(projectId) => 
       Project.find(By(Project.id, projectId)) match {
         case Full(project) =>
           val server = ServerInfo(project)
           ServerManagerCore.start(server)
+          project.status(Status.Running)
+          project.save
           self.reply(Response.STARTED)
           println("started " + projectId)
         case _ =>
           //TODO ERROR  
-          self.reply(Response.STARTED)
+          self.reply(Response.FAILED)
           println("failed to start " + projectId)
       }
     case Stop(projectId) => 
-      println("stopping " + projectId)
-          //ServerManagerCore.start(server)
-      self.reply(Response.STOPPED)
+      Project.find(By(Project.id, projectId)) match {
+        case Full(project) =>
+          val server = ServerInfo(project)
+          ServerManagerCore.stop(server)
+          project.status(Status.Stopped)
+          project.save
+          self.reply(Response.STOPPED)
+        case _ =>
+          //TODO ERROR  
+          self.reply(Response.FAILED)
+          println("failed to stop " + projectId)
+      }
     case _ => log.slf4j.info("error")
   }
 }
