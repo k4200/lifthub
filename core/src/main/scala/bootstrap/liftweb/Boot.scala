@@ -56,13 +56,16 @@ class Boot {
     // where to search snippet
     LiftRules.addToPackages("net.lifthub")
 
+    val loggedIn = If(() => User.loggedIn_?,
+                      () => RedirectResponse("/user_mgt/login"))
+
     // Build SiteMap
     def sitemap = SiteMap(
       List(
         Menu.i("Home") / "index" >> User.AddUserMenusAfter,
         Menu.i("Project") / "project" submenus
           Project.menus
-          ::: List(Menu.i("Operations") / "projects" / "operate")
+          ::: List(Menu.i("Operations") / "projects" / "operate") rule (loggedIn)
           //::: UserDatabase.menus
       ): _* )
 

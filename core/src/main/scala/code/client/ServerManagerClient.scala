@@ -8,7 +8,6 @@ import net.liftweb.common._
 import net.lifthub.model.Project
 import net.lifthub.common.event._
 
-//TODO change the name
 //class ServerManagerClient {
 object ServerManagerClient {
   import net.lifthub.common.ActorConfig._
