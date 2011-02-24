@@ -22,20 +22,22 @@ import net.lifthub.model.Project
 import bootstrap.liftweb.Boot
 
 object ServerManagerCore {
+  val TIMEOUT = 60000
+
   //TODO ok?
   val executor = actorOf[JettyExecutor]
   executor.start
 
   import internalevent._
   def start(server: ServerInfo): Box[Any] = {
-    executor !! Start(server) match {
+    executor !! (Start(server), TIMEOUT) match {
       case Some(reply) => Full(reply)
       case None => Failure("timeout")
     }
   }
 
   def stop(server: ServerInfo): Box[Any] = {
-    executor !! Stop(server) match {
+    executor !! (Stop(server), TIMEOUT) match {
       case Some(reply) => Full(reply)
       case None => Failure("timeout")
     }
