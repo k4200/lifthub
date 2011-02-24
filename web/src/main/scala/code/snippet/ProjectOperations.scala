@@ -19,24 +19,14 @@ import net.lifthub.client._
 
 class ProjectOperations {
   def listAll: CssBindFunc = {
-    import net.lifthub.model.Project._
     ".project *" #> 
       Project.findAllOfOwner.map(p => {
-	val process = {
-          if (p.status == Status.Stopped) {
-            SHtml.ajaxButton(Text("Start"), () => start(p))
-          } else if (p.status == Status.Running) {
-            SHtml.ajaxButton(Text("Stop"), () => stop(p))
-          } else {
-            Text("")
-          }
-	}
 	".name *" #> p.name &
         ".pull *" #> SHtml.ajaxButton(Text("Pull"), () => pull(p)) &
         ".update *" #> SHtml.ajaxButton(Text("Update"), () => update(p)) &
         ".build *" #> SHtml.ajaxButton(Text("Build"), () => build(p)) &
         ".deploy *" #> SHtml.ajaxButton(Text("Deploy"), () => deploy(p)) &
-        ".process *" #> process &
+        ".process *" #> processButton(p) &
         ".process [href]" #> ""
       })
   }
@@ -96,6 +86,17 @@ class ProjectOperations {
     }
     //TODO Change the button.
     Noop
+  }
+  
+  def processButton(p: Project) = {
+    import net.lifthub.model.Project._
+    if (p.status == Status.Stopped) {
+      SHtml.ajaxButton(Text("Start"), () => start(p))
+    } else if (p.status == Status.Running) {
+      SHtml.ajaxButton(Text("Stop"), () => stop(p))
+    } else {
+      Text("")
+    }
   }
 
 }

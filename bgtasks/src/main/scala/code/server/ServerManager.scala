@@ -22,6 +22,7 @@ import net.lifthub.model.Project
 import bootstrap.liftweb.Boot
 
 object ServerManagerCore {
+  //TODO ok?
   val executor = actorOf[JettyExecutor]
   executor.start
 
@@ -33,32 +34,6 @@ object ServerManagerCore {
   def stop(server: ServerInfo) = {
     executor ! Stop(server)
   }
-
-//   def execute2(server: ServerInfo, command: List[String]) = {
-//     val cmdLine = new CommandLine(command.head)
-//     command.tail.foreach(cmdLine.addArgument _)
-//     val resultHandler = new DefaultExecuteResultHandler()
-//   }
-
-  def execute(server: ServerInfo, command: List[String]) = {
-    val pb = (new java.lang.ProcessBuilder(command: _*)) directory
-      new java.io.File(server.basePath)
-    tryo {
-      // Don't wait for the process to finish.
-      val proc = pb.start
-      Full("Maybe started.")
-    } openOr {
-      Failure("failed to start 'sbt %s'.".format(command))
-    }
-  }
-
-//   def stop(server: ServerInfo) = {
-//     val command = List("java", "-DSTOP.PORT=" + server.stopPort,
-//                        " -DSTOP.KEY=" + server.projectName,
-//                        "-jar", "start.jar",
-//                        "--stop")
-//     execute(server, command)
-//   }
 }
 
 class ServerManager extends Actor {
