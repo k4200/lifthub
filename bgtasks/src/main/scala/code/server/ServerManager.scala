@@ -27,12 +27,18 @@ object ServerManagerCore {
   executor.start
 
   import internalevent._
-  def start(server: ServerInfo) = {
-    executor ! Start(server)
+  def start(server: ServerInfo): Box[Any] = {
+    executor !! Start(server) match {
+      case Some(reply) => Full(reply)
+      case None => Failure("timeout")
+    }
   }
 
-  def stop(server: ServerInfo) = {
-    executor ! Stop(server)
+  def stop(server: ServerInfo): Box[Any] = {
+    executor !! Stop(server) match {
+      case Some(reply) => Full(reply)
+      case None => Failure("timeout")
+    }
   }
 }
 
@@ -56,11 +62,19 @@ class ServerManager extends Actor {
       Project.find(By(Project.id, projectId)) match {
         case Full(project) =>
           val server = ServerInfo(project)
-          ServerManagerCore.start(server)
-          project.status(Status.Running)
-          project.save
-          self.reply(Response.STARTED)
-          println("started " + projectId)
+          ServerManagerCore.start(server) match {
+            case Full(x) =>
+	      project.status(Status.Running)
+	      project.save
+	      self.reply(Response.STARTED)
+	      println("started " + projectId)
+            case Failure(x, _, _) =>
+              println(x)
+              self.reply(Response.FAILED)
+            case _ =>
+              println("unknown error...")
+              self.reply(Response.FAILED)
+          }
         case _ =>
           //TODO ERROR  
           self.reply(Response.FAILED)
@@ -70,10 +84,18 @@ class ServerManager extends Actor {
       Project.find(By(Project.id, projectId)) match {
         case Full(project) =>
           val server = ServerInfo(project)
-          ServerManagerCore.stop(server)
-          project.status(Status.Stopped)
-          project.save
-          self.reply(Response.STOPPED)
+          ServerManagerCore.stop(server) match {
+            case Full(x) =>
+	      project.status(Status.Stopped)
+	      project.save
+	      self.reply(Response.STOPPED)
+            case Failure(x, _, _) =>
+              println(x)
+              self.reply(Response.FAILED)
+            case _ =>
+              println("unknown error...")
+              self.reply(Response.FAILED)
+	  }
         case _ =>
           //TODO ERROR  
           self.reply(Response.FAILED)

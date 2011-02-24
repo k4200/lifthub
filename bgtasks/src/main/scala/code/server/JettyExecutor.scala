@@ -40,7 +40,7 @@ class JettyExecutor extends Actor {
     try {
       // Don't wait for the process to finish.
       executor.execute(cmdLine)
-      Full("jetty started.")
+      Full("command succeeded.")
     } catch {
       case e: ExecuteException =>
 	val msg = "Failed to execute %s %s with exit code %d."
