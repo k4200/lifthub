@@ -102,6 +102,7 @@ class Boot {
     S.addAround(DB.buildLoanWrapper)
 
     //KK
+    LiftRules.ajaxPostTimeout = 60000
     System.setProperty("mail.smtp.host", "localhost")
   }
 }
