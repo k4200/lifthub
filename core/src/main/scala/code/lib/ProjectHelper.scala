@@ -38,6 +38,7 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
   val deployDirPath = basePath + "/userwebapps/" + projectName
   val confPath = basePath + "/etc/lifthub/" + projectName + ".xml"
   val templatePath = basePath + "/etc/jetty.xml.tmpl"
+  val executeLogPath = basePath + "/logs/" + projectName + "-execute.log"
   val stopPort = port + 1000 //TODO
 
   def writeConfFile: Boolean = {

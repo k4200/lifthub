@@ -21,29 +21,41 @@ import net.lifthub.model.Project
 
 import bootstrap.liftweb.Boot
 
+/**
+ * Sends messages to Actors for different servers, such as
+ * Jetty and Tomcat.
+ */
 object ServerManagerCore {
+  import internalevent._
   val TIMEOUT = 60000
 
   //TODO ok?
   val executor = actorOf[JettyExecutor]
   executor.start
 
-  import internalevent._
   def start(server: ServerInfo): Box[Any] = {
     executor !! (Start(server), TIMEOUT) match {
-      case Some(reply) => Full(reply)
+      case Some(Full(x)) => Full(x)
+      case Some(Failure(x,y,z)) => Failure(x,y,z)
+      case Some(_) => Failure("This shouldn't happen.")
       case None => Failure("timeout")
     }
   }
 
   def stop(server: ServerInfo): Box[Any] = {
     executor !! (Stop(server), TIMEOUT) match {
-      case Some(reply) => Full(reply)
+      case Some(Full(x)) => Full(x)
+      case Some(Failure(x,y,z)) => Failure(x,y,z)
+      case Some(_) => Failure("This shouldn't happen.")
       case None => Failure("timeout")
     }
   }
 }
 
+/**
+ * This actor runs as a service and listens on the port specified
+ * in ActorConfig.
+ */
 class ServerManager extends Actor {
   // max 5 retries, within 5000 millis
   //self.faultHandler = OneForOneStrategy(List(classOf[Exception]), 5, 5000)
