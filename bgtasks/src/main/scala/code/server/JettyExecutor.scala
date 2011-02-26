@@ -99,22 +99,40 @@ object Test {
     executor.setWatchdog(watchdog)
 
     // Redirect the output to a file
-    //val streamHandler = new PumpStreamHandler
-    val streamHandler = new PumpStreamHandler(null, null, null)
-    val os = new FileOutputStream(new File(server.executeLogPath))
-    //val os = new PipedOutputStream()
-    //val streamHandler = new PumpStreamHandler(os)
+    //val os = new FileOutputStream(new File(server.executeLogPath))
+    val os = new PipedOutputStream()
+    val streamHandler = new PumpStreamHandler(os)
     executor.setStreamHandler(streamHandler)
 
     val resultHandler = new DefaultExecuteResultHandler()
 
-    executor.execute(cmdLine, resultHandler) // asynchronous
-    println("exec!!!!!!!!!!!!!!!!")
+    executor.execute(cmdLine, resultHandler)
+//     spawn {
+//       println("exec start")
+//       val exitValue = executor.execute(cmdLine)
+//       //executor.execute(cmdLine, resultHandler)
+//       println("exec!!!!!!!!!!!!!!!!")
+//     }
 
-//     val is = new DataInputStream(new PipedInputStream(os));
+    
+    val is = new PipedInputStream(os);
+    val br = new BufferedReader(new InputStreamReader(is)) 
+
+    var line = br.readLine
+    var finish = false
+    while (line != null && !finish) {
+      println(line)
+      if (line.contains("Exception")) {
+	println("done!!!!!!!!!!!!!!!!(error)")
+	finish = true
+      }
+      line = br.readLine
+    }
+
+//     val is = new DataInputStream(new PipedInputStream(os))
 //     val buf = new Array[Byte](1024)
 //     while (is.read(buf, 0, 1024) != -1) {
-//       println(buf)
+//       print(new String(buf, "UTF-8"))
 //     }
     println("done!!!!!!!!!!!!!!!!")
   }

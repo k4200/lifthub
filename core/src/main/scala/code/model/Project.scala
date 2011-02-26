@@ -29,7 +29,6 @@ with AggregateFunctions[Project]
   }
 
   // Constant values
-  //TODO should vary depending on the user (ie. payment status).
   val PORT_RANGE = (9000, 9999)
 
   override def dbTableName = "projects"; // define the DB table name
@@ -111,14 +110,23 @@ with AggregateFunctions[Project]
   })
 
   override def afterDelete = List(project => {
-    //TODO Delete project files.
     println("afterDelete")
 
+    // Drop the database.
     for(database <- project.database.obj)
     yield {
       database.dropDatabase
       database.delete_!
     }
+
+    // Remove the entry from gitosis.
+    val pi = ProjectInfo(project)
+    GitosisHelper.removeEntryFromConf(pi)
+    GitosisHelper.gitAddConf
+    GitosisHelper.commitAndPush("Remove project " + project.name)
+
+    // Remove the project files.
+    ProjectHelper.deleteProject(pi)
   })
 
   private[model] def getAvailablePort: Int = {

@@ -4,6 +4,9 @@ package lib {
 import net.lifthub.model.User
 import net.lifthub.model.Project
 
+import org.apache.commons.io.{FileUtils => CommonsFileUtils}
+
+
 import FileUtils._
 
 // JGit
@@ -91,6 +94,11 @@ object NginxConf {
   def apply(project: Project): NginxConf = {
     this(project.name, project.port.is)
   }
+  def remove(project: Project): Boolean = {
+    val nginxConf = NginxConf(project.name, 0)
+    new java.io.File(nginxConf.confPath).delete &&
+    new java.io.File(nginxConf.logPath).delete
+  }
 }
 
 // ------------------------------------------------
@@ -166,6 +174,37 @@ object GitosisHelper {
       writer.println(generateConfEntryString(projectInfo, user))
       writer.println //newLine
     })
+  }
+
+  /**
+   * Removes the entry of the project from gitosis.conf
+   */
+  def removeEntryFromConf(projectInfo: ProjectInfo): Boolean = {
+    val tempFile = java.io.File.createTempFile("gitosis", "conf")
+    import scala.io.Source
+    
+    val startPattern = "^\\[group %s\\]$".format(projectInfo.name).r
+
+    FileUtils.printToFile(tempFile)(writer => {
+      val it = Source.fromFile(conf).getLines()
+      for (line <- it) {
+	startPattern.findFirstIn(line) match {
+          case Some(_) =>
+            while (it.hasNext && it.next.length != 0) {}
+          case _ =>
+            writer.println(line)
+	}
+      }
+    })
+    
+    try {
+      CommonsFileUtils.moveFile(tempFile, conf)
+      true
+    } catch {
+      case e: Exception =>
+        e.printStackTrace
+        false
+    }
   }
 
   /**
@@ -260,6 +299,11 @@ object GitosisHelper {
       case e: Exception => e.getCause.printStackTrace
     }
   }
+
+  def main(args: Array[String]) {
+    val pi = ProjectInfo("foo", TemplateType.Mvc, "2.2")
+    removeEntryFromConf(pi)
+  }
 }
 
 // ------------------------------------------------
@@ -280,12 +324,11 @@ object SbtHelper {
   }
 
   def deploy(project: Project): Box[String] = {
-    import org.apache.commons.io.FileUtils
     //TODO Hot deploy.
     val pi = ProjectInfo(project)
     val si = ServerInfo(project)
     tryo {
-      FileUtils.copyFile(pi.warPath, si.deployDirPath + "/ROOT.war")
+      CommonsFileUtils.copyFile(pi.warPath, si.deployDirPath + "/ROOT.war")
       Full("Project %s successfully deployed.".format(project.name))
     } openOr {
       Failure("Failed to deploy.")
@@ -356,11 +399,14 @@ object ProjectHelper {
     GitosisHelper.commitAndPush("Added a user: " + user.email)
   }
 
+  def deleteProject(projectInfo: ProjectInfo) = {
+    CommonsFileUtils.deleteDirectory(projectInfo.path)
+  }
+
   //TODO shoud be private --------
   def copyTemplate(projectInfo: ProjectInfo): Boolean = {
-    import org.apache.commons.io.FileUtils
     try {
-      FileUtils.copyDirectory(projectInfo.templatePath, projectInfo.path)
+      CommonsFileUtils.copyDirectory(projectInfo.templatePath, projectInfo.path)
       val sbt = projectInfo.path + "/sbt"
       sbt.setExecutable(true)
       true

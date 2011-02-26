@@ -191,6 +191,9 @@ writable = foo"""
       //GitosisHelper.commitAndPush("Added a user: " + user.email) mustBe true
       true mustBe true
     }
+//     "remove an entry from the conf file" in {
+//       GitosisHelper.removeEntryFromConf(pi)
+//     }
   }
 
 }
