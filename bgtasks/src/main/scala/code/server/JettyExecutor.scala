@@ -1,7 +1,8 @@
 package net.lifthub {
 package server {
 
-import java.io._
+import java.io.File
+import java.io.FileOutputStream
 
 import net.liftweb.common._
 import net.liftweb.util.Helpers._
@@ -14,13 +15,12 @@ import org.apache.commons.exec._
 import internalevent._
 
 import net.lifthub.lib.ServerInfo
-import net.lifthub.lib.FileUtils
 
 class JettyExecutor extends Actor {
+  val COMMAND = "bin/jetty-run-lifthub.sh"
   val TIMEOUT = 30000
-
-  val keywordSuccess = "INFO::Started"
-  val keywordFailure = "Exception"
+  val KEYWORD_SUCCESS = "INFO::Started"
+  val KEYWORD_FAILURE = "Exception"
 
   /**
    * Replies a Box[String].
@@ -28,24 +28,25 @@ class JettyExecutor extends Actor {
    */
   def receive = {
     case Start(serverInfo) =>
+      val args = List("start", serverInfo.projectName, serverInfo.stopPort.toString)
       self.reply(tryo {
-        start(serverInfo)
+        execute(serverInfo, args)
+        checkProcess(serverInfo)
       })
     case Stop(serverInfo) =>
       val args = List("stop", serverInfo.projectName, serverInfo.stopPort.toString)
       self.reply(tryo {
-        stop(serverInfo)
+        execute(serverInfo, args)
 	Full("stopped")
       })
   }
 
-  def start(server: ServerInfo): Box[String] = {
-    val args = List("-DSTOP.PORT=" + server.stopPort,
-                    "-DSTOP.KEY=" + server.projectName,
-                    "-jar", "start.jar",
-                    server.confPath)
+  def kill(server: ServerInfo) = {
+    val args = List("kill", server.projectName)
+  }
 
-    val cmdLine = new CommandLine("java")
+  def execute(server: ServerInfo, args: List[String]) = {
+    val cmdLine = new CommandLine(COMMAND)
     args.foreach(cmdLine.addArgument _)
 
     val executor = new DefaultExecutor
@@ -54,185 +55,61 @@ class JettyExecutor extends Actor {
     val watchdog = new ExecuteWatchdog(TIMEOUT)
     executor.setWatchdog(watchdog)
 
-    val os = new PipedOutputStream()
-    val streamHandler = new PumpStreamHandler(os)
+    // Discard the output. (Actually, there's no output from the process
+    // because the shell spript redirects it to the log file.)
+    val streamHandler = new PumpStreamHandler(null, null, null)
     executor.setStreamHandler(streamHandler)
 
     val resultHandler = new DefaultExecuteResultHandler()
-    executor.execute(cmdLine, resultHandler) // asynchronous
-    
-    val is = new PipedInputStream(os);
-    //val br = new BufferedReader(new InputStreamReader(is)) 
-    val inSource = scala.io.Source.fromInputStream(is)
+    executor.execute(cmdLine)  // synchronous
 
-    // Parse the line to see the process has succeeded or falied.
-    def parseOutput(line: String): Box[Boolean] = {
-      if (line.contains(keywordFailure)) {
-        Full(false)
-      } else if (line.contains(keywordSuccess)) {
-        Full(true)
+    println("JettyExecutor.execute finished.")
+  }
+
+  def checkProcess(serverInfo: ServerInfo): Box[String] = {
+    def parseLog(serverInfo: ServerInfo): Box[Boolean] = {
+      val log = scala.io.Source.fromFile(serverInfo.executeLogPath).mkString
+      if (log.contains(KEYWORD_FAILURE)) {
+	Full(false)
+      } else if (log.contains(KEYWORD_SUCCESS)) {
+	Full(true)
       } else {
 	Empty
       }
     }
 
-    val returnResult = (in: Box[Boolean]) => {
-      in match {
-	case Full(true) =>
-          return Full("Succedded to start.")
-	case Full(false) =>
-	  watchdog.destroyProcess
-	  return Failure("An exception occured during startup. aborted.")
-        case _ => {}
+    val start = System.currentTimeMillis
+    while (true) {
+      if (System.currentTimeMillis - start > TIMEOUT) {
+	//timeout occured.
+	kill(serverInfo)
+        return  Failure("Timeout.")
       }
+      parseLog(serverInfo) match {
+        case Full(true) =>
+          return  Full("Server started.")
+        case Full(false) =>
+          kill(serverInfo)
+          return  Failure("An exception occured.")
+        case Empty =>
+          println("still running")
+        case _ =>
+          return  Failure("Unknown error.")
+      }
+      Thread.sleep(1000) //TODO
     }
-
-//     var line = br.readLine
-//     while (line != null) {
-//       line = br.readLine
-//     }
-
-    // Read the output and write to the log file until a keyword is found.
-    FileUtils.printToFile(new File(server.executeLogPath))(writer => {
-      for (line <- inSource.getLines) {
-        writer.write(line)
-        returnResult(parseOutput(line))
-      }
-    })
-
-    // This shouldn't happen.
-    return Failure("The process finished accidentally?")
+    return Failure("Unknown error")
   }
 
-  def stop(server: ServerInfo): Box[String] = {
-    val args = List("-DSTOP.PORT=" + server.stopPort,
-                    "-DSTOP.KEY=" + server.projectName,
-                    "-jar", "start.jar",
-                    "--stop")
-
-    val cmdLine = new CommandLine("java")
-    args.foreach(cmdLine.addArgument _)
-
-    val executor = new DefaultExecutor
-    executor.setWorkingDirectory(new File(server.basePath))
-
-    val watchdog = new ExecuteWatchdog(TIMEOUT)
-    executor.setWatchdog(watchdog)
-
-    val streamHandler = new PumpStreamHandler(
-      new FileOutputStream(new File(server.executeLogPath)))
-    executor.setStreamHandler(streamHandler)
-
-    val ret = executor.execute(cmdLine)
-    if (ret == 0) { // synchronous
-      Full("Succeeded to stop.")
-    } else {
-      Failure("Failed to stop with exit code " + ret)
-    }
-  }
 }
 
 object Test {
-  val TIMEOUT = 10000
-  val keywordSuccess = "INFO::Started"
-  val keywordFailure = "Exception"
+  val COMMAND = "bin/jetty-run-lifthub.sh"
+  val TIMEOUT = 20000
+  val KEYWORD_SUCCESS = "INFO::Started"
+  val KEYWORD_FAILURE = "Exception"
 
-
-  def start(server: ServerInfo): Box[String] = {
-    val args = List("-DSTOP.PORT=" + server.stopPort,
-                    "-DSTOP.KEY=" + server.projectName,
-                    "-jar", "start.jar",
-                    server.confPath)
-
-    val cmdLine = new CommandLine("java")
-    args.foreach(cmdLine.addArgument _)
-
-    val executor = new DefaultExecutor
-    executor.setWorkingDirectory(new File(server.basePath))
-
-    val watchdog = new ExecuteWatchdog(TIMEOUT)
-    executor.setWatchdog(watchdog)
-
-    val os = new PipedOutputStream()
-    val streamHandler = new PumpStreamHandler(os)
-    executor.setStreamHandler(streamHandler)
-
-    val resultHandler = new DefaultExecuteResultHandler()
-    executor.execute(cmdLine, resultHandler) // asynchronous
-    
-    val is = new PipedInputStream(os);
-    //val br = new BufferedReader(new InputStreamReader(is)) 
-    val inSource = scala.io.Source.fromInputStream(is)
-
-    // Parse the line to see the process has succeeded or falied.
-    def parseOutput(line: String): Box[Boolean] = {
-      if (line.contains(keywordFailure)) {
-        Full(false)
-      } else if (line.contains(keywordSuccess)) {
-        Full(true)
-      } else {
-	Empty
-      }
-    }
-
-    val returnResult = (in: Box[Boolean]) => {
-      in match {
-	case Full(true) =>
-          println("!!!!!!!!!!!!!!!!!!!!!!!1")
-          return Full("Succedded to start.")
-	case Full(false) =>
-          watchdog.destroyProcess
-          println("killed? " + watchdog.killedProcess)
-          streamHandler.stop
-          inSource.close
-          os.close
-	  println("!!!!!!!!!!!!!!!!!!!!!!!2")
-	  return Failure("An exception occured during startup. aborted.")
-        case _ => {}
-      }
-    }
-
-    // Read the output and write to the log file until a keyword is found.
-    FileUtils.printToFile(new File(server.executeLogPath))(writer => {
-      for (line <- inSource.getLines) {
-	println("%%%%" + line)
-        writer.write(line)
-        returnResult(parseOutput(line))
-      }
-    })
-
-    // This shouldn't happen.
-    return Failure("The process finished accidentally?")
-  }
-
-  def stop(server: ServerInfo): Box[String] = {
-    val args = List("-DSTOP.PORT=" + server.stopPort,
-                    "-DSTOP.KEY=" + server.projectName,
-                    "-jar", "start.jar",
-                    "--stop")
-
-    val cmdLine = new CommandLine("java")
-    args.foreach(cmdLine.addArgument _)
-
-    val executor = new DefaultExecutor
-    executor.setWorkingDirectory(new File(server.basePath))
-
-    val watchdog = new ExecuteWatchdog(TIMEOUT)
-    executor.setWatchdog(watchdog)
-
-    val streamHandler = new PumpStreamHandler(
-      new FileOutputStream(new File(server.executeLogPath)))
-    executor.setStreamHandler(streamHandler)
-
-    val ret = executor.execute(cmdLine)
-    if (ret == 0) { // synchronous
-      Full("Succeeded to stop.")
-    } else {
-      Failure("Failed to stop with exit code " + ret)
-    }
-  }
-
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     import net.liftweb.common._
     import net.liftweb.mapper._
     import net.lifthub.model.Project
@@ -244,9 +121,57 @@ object Test {
 
     val project = Project.find(By(Project.id, 1)).get
     val serverInfo = ServerInfo(project)
-    start(serverInfo)
-    println("done!!!!!!!!!!!!!!!!!!!!!!!")
+    val args = List("start", serverInfo.projectName, serverInfo.stopPort.toString)
+    execute(serverInfo, args)
+
+    val start = System.currentTimeMillis
+    while (true) {
+      if (System.currentTimeMillis - start > TIMEOUT) {
+	//timeout occured.
+	return
+      }
+      checkProcess(serverInfo) match {
+        case Full(x) =>
+          println("result = " + x)
+          return 
+        case Empty =>
+          println("still running")
+        case _ =>
+          println("This shouldn't happen.")
+      }
+      Thread.sleep(1000)
+    }
+
   }
+
+  def execute(server: ServerInfo, args: List[String]) = {
+    import java.io._
+    val cmdLine = new CommandLine(COMMAND)
+    args.foreach(cmdLine.addArgument _)
+
+    val executor = new DefaultExecutor
+    executor.setWorkingDirectory(new File(server.basePath))
+
+    val streamHandler = new PumpStreamHandler(null, null, null)
+    executor.setStreamHandler(streamHandler)
+
+    val watchdog = new ExecuteWatchdog(TIMEOUT)
+    executor.setWatchdog(watchdog)
+
+    executor.execute(cmdLine)
+  }
+
+  def checkProcess(serverInfo: ServerInfo): Box[Boolean] = {
+    val log = scala.io.Source.fromFile(serverInfo.executeLogPath).mkString
+    if (log.contains(KEYWORD_FAILURE)) {
+      Full(false)
+    } else if (log.contains(KEYWORD_SUCCESS)) {
+      Full(true)
+    } else {
+      Empty
+    }
+  }
+
 }
 
 }
