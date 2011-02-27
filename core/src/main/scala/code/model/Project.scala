@@ -34,15 +34,15 @@ with AggregateFunctions[Project]
   override def dbTableName = "projects"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
-  override def validation = List(checkNumberOfDatabases, checkSshKey)
+  override def validation = List(checkNumberOfProjects, checkSshKey)
 
   override def beforeCreate = List(
-    checkNumberOfDatabases,
+    checkNumberOfProjects,
     setPort,
     createDatabaseIfNone
   )
 
-  private def checkNumberOfDatabases(project: Project): List[FieldError] = {
+  private def checkNumberOfProjects(project: Project): List[FieldError] = {
     User.currentUser match {
       case Full(user) =>
         if (count(By(Project.userId, user.id)) >= user.maxNumProjects) {
@@ -96,8 +96,8 @@ with AggregateFunctions[Project]
     yield {
       val projectInfo = ProjectInfo(project)
       ProjectHelper.createProject(projectInfo, user)
-      //FIXME The file won't be added to git.
       ProjectHelper.createProps(projectInfo, dbInfo)
+      ProjectHelper.commitAndPushProject(projectInfo)
       // Create a config file for jetty.
       val serverInfo = ServerInfo(project)
       serverInfo.writeConfFile
@@ -124,6 +124,9 @@ with AggregateFunctions[Project]
     GitosisHelper.removeEntryFromConf(pi)
     GitosisHelper.gitAddConf
     GitosisHelper.commitAndPush("Remove project " + project.name)
+
+    //TODO Remove the repository itself.
+    // This requires "gitosis" user privilege, so be careful.
 
     // Remove the project files.
     ProjectHelper.deleteProject(pi)
@@ -156,6 +159,7 @@ with UserEditableKeyedMapper[Long, Project]
   object liftVersion extends MappedString(this, 10) {
     override def dbColumnName = "lift_version"
     override def defaultValue = "2.2" 
+    override def dbDisplay_? = false //TODO for now only 2.2 is available.
   }
 
   object database extends MappedLongForeignKey(this, UserDatabase) {

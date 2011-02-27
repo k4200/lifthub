@@ -118,7 +118,8 @@ case class ProjectInfo (name: String, templateType: TemplateType.Value, version:
   /**
    * contains database account information.
    */
-  def propsPath = path + "/src/main/resources/default.props"
+  //def propsPath = path + "/src/main/resources/default.props"
+  def propsPath = path + "/src/main/resources/props/production.default.props"
 
   def warPath = path + ("/target/scala_%s/lift-sbt-template_%s-0.1.war"
                         .format(SCALA_VER, SCALA_VER))
@@ -199,7 +200,8 @@ object GitosisHelper {
     })
     
     try {
-      CommonsFileUtils.moveFile(tempFile, conf)
+      CommonsFileUtils.copyFile(tempFile, conf)
+      tempFile.delete
       true
     } catch {
       case e: Exception =>
@@ -220,15 +222,6 @@ object GitosisHelper {
       |writable = %s"""
       .stripMargin.format(projectInfo.name,
                           adminEmail, user.email, projectInfo.name)
-//     """[group %s]
-//       |members = %s %s
-//       |writable = %s
-//       |
-//       |[repo %s]
-//       |owner = %s"""
-//       .stripMargin.format(projectInfo.name,
-//                           adminEmail, user.email, projectInfo.name,
-//                           projectInfo.name, user.email)
   }
 
   /**
@@ -384,12 +377,14 @@ object ProjectHelper {
   }
 
   /**
-   * 
+   * Adds the user to gitosis and copy the template.
+   * The changes need to be commited by using
+   * <code>commitAndPushProject</code>.
    */
   def createProject(projectInfo: ProjectInfo, user: User) = {
     addUserToGitosis(projectInfo, user)
     copyTemplate(projectInfo)
-    commitAndPushProject(projectInfo)
+    //commitAndPushProject(projectInfo)
   }
 
   def addUserToGitosis(projectInfo: ProjectInfo, user: User): Boolean = {
