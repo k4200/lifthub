@@ -98,10 +98,12 @@ with AggregateFunctions[Project]
       ProjectHelper.createProject(projectInfo, user)
       ProjectHelper.createProps(projectInfo, dbInfo)
       ProjectHelper.commitAndPushProject(projectInfo)
-      // Create a config file for jetty.
+
+      // Copy the jail template and create a config file for jetty.
       val serverInfo = ServerInfo(project)
-      serverInfo.writeConfFile
-      //serverInfo
+      serverInfo.setupNewServer
+
+      // nginx
       val nginxConf = NginxConf(project)
       nginxConf.writeToFile
     }) getOrElse {

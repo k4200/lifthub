@@ -36,15 +36,34 @@ object TemplateType extends Enumeration {
 
 case class ServerInfo(projectName: String, port: Int, version: String) {
   //Paths
+  val JAIL_COPY_SCRIPT = "copy-template.sh"
+  val JAIL_PARENT_DIR = "/home/lifthubuser/chroot"
+  val jailRootPath = JAIL_PARENT_DIR + "/" + projectName
+
   val serverName = "jetty"
   val basePath = "/home/lifthubuser/servers/%s-%s".format(serverName, version)
-  val deployDirPath = basePath + "/userwebapps/" + projectName
-  val confPath = basePath + "/etc/lifthub/" + projectName + ".xml"
+
+  val deployDirPath = jailRootPath + basePath + "/userwebapps/" + projectName
+  val confPath = jailRootPath + basePath + "/etc/lifthub/" + projectName + ".xml"
   val templatePath = basePath + "/etc/jetty.xml.tmpl"
-  val executeLogPath = basePath + "/logs/" + projectName + "-execute.log"
-  val pidFilePath = basePath + "/logs/" + projectName + ".pid"
+  val executeLogPath = jailRootPath + basePath + "/logs/" + projectName + "-execute.log"
+  //val pidFilePath = jailRootPath + basePath + "/logs/" + projectName + ".pid"
   val stopPort = port + 1000 //TODO
 
+  /**
+   * Sets up a new server runtime environment.
+   *
+   */
+  def setupNewServer = {
+    copyJailTemplate
+    writeConfFile
+  }
+
+  /**
+   * Creates a config file for the application server.
+   * Currently, only jetty is supported.
+   * This must be called after the chroot is created.
+   */
   def writeConfFile: Boolean = {
     FileUtils.printToFile(confPath)(writer => {
       writer.write(confString)
@@ -59,6 +78,19 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
     namePattern.replaceAllIn(
       portPattern.replaceAllIn(tmpl.mkString, port.toString),
       projectName)
+  }
+
+  /**
+   * Copies the jail template
+   */
+  def copyJailTemplate = {
+    import org.apache.commons.exec._
+    val cmdLine = new CommandLine(JAIL_COPY_SCRIPT)
+    cmdLine.addArgument(projectName)
+
+    val executor = new DefaultExecutor
+    executor.setWorkingDirectory(new File(JAIL_PARENT_DIR))
+    executor.execute(cmdLine)  // synchronous
   }
 }
 
@@ -363,7 +395,6 @@ object SbtHelper {
 /**
  */
 object ProjectHelper {
-
   // for debug
   def main(args: Array[String]) {
     val projectInfo = ProjectInfo("foo", TemplateType.Mvc, "2.2")

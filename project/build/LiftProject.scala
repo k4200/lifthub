@@ -29,7 +29,8 @@ with AkkaProject {
     "mysql" % "mysql-connector-java" % "5.1.14", //MySQL
     "commons-io" % "commons-io" % "2.0.1",
     "org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" withJavadoc,
-    "commons-lang" % "commons-lang" % "2.5"
+    "commons-lang" % "commons-lang" % "2.5",
+    "org.apache.commons" % "commons-exec" % "1.1"
     //"org.scala-tools.sbt" % "sbt-launch" % "0.7.2" // doesn't work with 2.8
     // https://github.com/harrah/process
     //"org.scala-tools.sbt" % "process" % "0.1" // doesn't work with 2.8
@@ -57,7 +58,6 @@ with AkkaProject {
   override def libraryDependencies = Set(
     //"commons-daemon" % "commons-daemon" % "1.0.3",
     //"org.apache.commons" % "commons-daemon" % "1.0.3",
-    "org.apache.commons" % "commons-exec" % "1.1"
     //"org.mortbay.jetty" % "jetty" % "6.1.26"
   ) ++ super.libraryDependencies
 }

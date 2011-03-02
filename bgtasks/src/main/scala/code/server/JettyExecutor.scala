@@ -17,7 +17,9 @@ import internalevent._
 import net.lifthub.lib.ServerInfo
 
 class JettyExecutor extends Actor {
-  val COMMAND = "bin/jetty-run-lifthub.sh"
+  // This script uses chroot and calls the other script.
+  val COMMAND = "jetty-run-lifthub-root.sh"
+
   val TIMEOUT = 30000
   val KEYWORD_SUCCESS = "INFO::Started"
   val KEYWORD_FAILURE = "Exception"
@@ -50,7 +52,8 @@ class JettyExecutor extends Actor {
     args.foreach(cmdLine.addArgument _)
 
     val executor = new DefaultExecutor
-    executor.setWorkingDirectory(new File(server.basePath))
+    //executor.setWorkingDirectory(new File(server.basePath))
+    executor.setWorkingDirectory(new File(server.JAIL_PARENT_DIR))
 
     val watchdog = new ExecuteWatchdog(TIMEOUT)
     executor.setWatchdog(watchdog)
