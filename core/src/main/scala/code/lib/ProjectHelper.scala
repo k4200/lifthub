@@ -36,7 +36,7 @@ object TemplateType extends Enumeration {
 
 case class ServerInfo(projectName: String, port: Int, version: String) {
   //Paths
-  val JAIL_COPY_SCRIPT = "copy-template.sh"
+  val JAIL_SETUP_PROG = "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
   val JAIL_PARENT_DIR = "/home/lifthubuser/chroot"
   val jailRootPath = JAIL_PARENT_DIR + "/" + projectName
 
@@ -55,8 +55,12 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
    *
    */
   def setupNewServer = {
-    copyJailTemplate
+    executeJailSetupProgram("create")
     writeConfFile
+  }
+
+  def deleteServer = {
+    executeJailSetupProgram("delete")
   }
 
   /**
@@ -81,15 +85,19 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
   }
 
   /**
-   * Copies the jail template
+   * Executes the jail setup program with sudo.
+   * @parameter cmd either "create" or "delete"
    */
-  def copyJailTemplate = {
+  def executeJailSetupProgram(cmd: String) = {
+    //TODO Test this. this may throw an exception.
     import org.apache.commons.exec._
-    val cmdLine = new CommandLine(JAIL_COPY_SCRIPT)
+    val cmdLine = new CommandLine("sudo")
+    cmdLine.addArgument(JAIL_SETUP_PROG)
+    cmdLine.addArgument(cmd)
     cmdLine.addArgument(projectName)
 
     val executor = new DefaultExecutor
-    executor.setWorkingDirectory(new File(JAIL_PARENT_DIR))
+    //executor.setWorkingDirectory(new File(JAIL_PARENT_DIR))
     executor.execute(cmdLine)  // synchronous
   }
 }

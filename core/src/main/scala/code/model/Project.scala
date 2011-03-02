@@ -130,6 +130,10 @@ with AggregateFunctions[Project]
     //TODO Remove the repository itself.
     // This requires "gitosis" user privilege, so be careful.
 
+    // Delete the server environment.
+    val si = ServerInfo(project)
+    si.deleteServer
+
     // Remove the project files.
     ProjectHelper.deleteProject(pi)
   })

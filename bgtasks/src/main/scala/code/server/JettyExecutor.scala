@@ -18,7 +18,8 @@ import net.lifthub.lib.ServerInfo
 
 class JettyExecutor extends Actor {
   // This script uses chroot and calls the other script.
-  val COMMAND = "jetty-run-lifthub-root.sh"
+  //val COMMAND = "jetty-run-lifthub-root.sh"
+  val COMMAND = "/home/lifthubuser/sbin/jetty-run-lifthub-root.sh"
 
   val TIMEOUT = 30000
   val KEYWORD_SUCCESS = "INFO::Started"
@@ -30,15 +31,15 @@ class JettyExecutor extends Actor {
    */
   def receive = {
     case Start(serverInfo) =>
-      val args = List("start", serverInfo.projectName, serverInfo.stopPort.toString)
+      val cmd = List("sudo", COMMAND, "start", serverInfo.projectName, serverInfo.stopPort.toString)
       self.reply(tryo {
-        execute(serverInfo, args)
+        execute(serverInfo, cmd)
         checkProcess(serverInfo)
       })
     case Stop(serverInfo) =>
-      val args = List("stop", serverInfo.projectName, serverInfo.stopPort.toString)
+      val cmd = List(COMMAND, "stop", serverInfo.projectName, serverInfo.stopPort.toString)
       self.reply(tryo {
-        execute(serverInfo, args)
+        execute(serverInfo, cmd)
 	Full("stopped")
       })
   }
@@ -47,13 +48,13 @@ class JettyExecutor extends Actor {
     val args = List("kill", server.projectName)
   }
 
-  def execute(server: ServerInfo, args: List[String]) = {
-    val cmdLine = new CommandLine(COMMAND)
-    args.foreach(cmdLine.addArgument _)
+  def execute(server: ServerInfo, cmd: List[String]) = {
+    val cmdLine = new CommandLine(cmd.head)
+    cmd.tail.foreach(cmdLine.addArgument _)
 
     val executor = new DefaultExecutor
     //executor.setWorkingDirectory(new File(server.basePath))
-    executor.setWorkingDirectory(new File(server.JAIL_PARENT_DIR))
+    //executor.setWorkingDirectory(new File(server.JAIL_PARENT_DIR))
 
     val watchdog = new ExecuteWatchdog(TIMEOUT)
     executor.setWatchdog(watchdog)
