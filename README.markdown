@@ -10,6 +10,8 @@ See [the slides](http://www.slideshare.net/k4200/lifthub-rpscala26) on SlideShar
 
 # How to set up the environment
 
+I use CentOS 5.3.
+
 ## Create users
 
 'lifthub' and 'lifthubuser' are necessary for the system.
@@ -17,12 +19,12 @@ See [the slides](http://www.slideshare.net/k4200/lifthub-rpscala26) on SlideShar
 The management application, which runs on port 8080, runs under 'lifthub' privilege. This user also does the following.
 
 + Set up a project
-++ Copy a Lift template project (included in the Lift tarball).
-++ Add some config files.
+ + Copy a Lift template project (included in the Lift tarball).
+ + Add some config files.
 + Access the git repository and gitosis
 + Invoke sbt
-++ sbt update
-++ sbt package
+ + sbt update
+ + sbt package
 + Create/delete databases
 + Create a config file for nginx
 
@@ -35,13 +37,13 @@ The management application, which runs on port 8080, runs under 'lifthub' privil
 
 See [my blog entry](http://www.kazu.tv/blog/archives/001006.html)
 
-$ sudo yum install gitosis
+	$ sudo yum install gitosis
 
 	lifthub$ ssh-keygen
 
 Add the public key of 'lifthub' to gitosis-admin.
 
-lifthub$ git clone gitosis@localhost:gitosis-admin.gitt
+	lifthub$ git clone gitosis@localhost:gitosis-admin.gitt
 
 Now the gitosis.conf looks like the following.
 
@@ -77,5 +79,33 @@ Add the following entries.
 	lifthub     localhost = NOPASSWD:/home/lifthub/sbin/*
 	lifthubuser localhost = NOPASSWD:/home/lifthubuser/sbin/*
 
+## nginx
+
+nginx is used as a reverse proxy. You don't really need it for testing.
+
+	$ sudo yum install nginx
+
+The RPM might not work. See [my blog post](http://www.kazu.tv/blog/archives/001012.html)
+
+Create directories for the system.
+
+	lifthub$ mkdir ~/nginx/{conf.d,logs} 
+
+# TODO
+
+I'm new to github. Maybe I should use the wiki and issue tracker?
+
++ to be addressed before beta
+ + Fix the conflict issue with 'git pull' (deleting all the files and git clone every time should be enough).
+ + Make git operations thread safe.
+ + Random password generation when sending an invitation mail.
+ + Page for viewing log files.
+ + Restrict project names. e.g. 'www' and some other names shouldn't be used.
++ enhancements etc.
+ + Add options for databases and components, including PostgreSQL and MongoDB.
+ + Offer phpMyAdmin to end users.
+ + Some design work (now it uses the default template as you see).
+ + Payment??
+ + Assign dedicated server instances to priority users.
 
 (not finished yet)
