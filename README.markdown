@@ -19,12 +19,12 @@ I use CentOS 5.3.
 The management application, which runs on port 8080, runs under 'lifthub' privilege. This user also does the following.
 
 + Set up a project
- + Copy a Lift template project (included in the Lift tarball).
- + Add some config files.
+	+ Copy a Lift template project (included in the Lift tarball).
+	+ Add some config files.
 + Access the git repository and gitosis
 + Invoke sbt
- + sbt update
- + sbt package
+	+ sbt update
+	+ sbt package
 + Create/delete databases
 + Create a config file for nginx
 
@@ -96,16 +96,16 @@ Create directories for the system.
 I'm new to github. Maybe I should use the wiki and issue tracker?
 
 + to be addressed before beta
- + Fix the conflict issue with 'git pull' (deleting all the files and git clone every time should be enough).
- + Make git operations thread safe.
- + Random password generation when sending an invitation mail.
- + Page for viewing log files.
- + Restrict project names. e.g. 'www' and some other names shouldn't be used.
+	+ Fix the conflict issue with 'git pull' (deleting all the files and git clone every time should be enough).
+	+ Make git operations thread safe.
+	+ Random password generation when sending an invitation mail.
+	+ Page for viewing log files.
+	+ Restrict project names. e.g. 'www' and some other names shouldn't be used.
 + enhancements etc.
- + Add options for databases and components, including PostgreSQL and MongoDB.
- + Offer phpMyAdmin to end users.
- + Some design work (now it uses the default template as you see).
- + Payment??
- + Assign dedicated server instances to priority users.
+	+ Add options for databases and components, including PostgreSQL and MongoDB.
+	+ Offer phpMyAdmin to end users.
+	+ Some design work (now it uses the default template as you see).
+	+ Payment??
+	+ Assign dedicated server instances to priority users.
 
 (not finished yet)
