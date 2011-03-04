@@ -23,7 +23,7 @@ class ProjectOperations {
     ".project *" #> 
       Project.findAllOfOwner.map(p => {
 	".name *" #> p.name &
-        ".pull *" #> SHtml.ajaxButton(Text("Pull"), () => pull(p)) &
+        ".updatews *" #> SHtml.ajaxButton(Text("Update WS"), () => updatews(p)) &
         ".update *" #> SHtml.ajaxButton(Text("Update"), () => update(p)) &
         ".build *" #> SHtml.ajaxButton(Text("Build"), () => build(p)) &
         ".deploy *" #> SHtml.ajaxButton(Text("Deploy"), () => deploy(p)) &
@@ -49,11 +49,11 @@ class ProjectOperations {
     SetHtml("process-" + project.id, processButton(newproject))
   }
 
-  def pull(project: Project): JsCmd = {
-    if(ProjectHelper.pullProject(project)) {
-      S.notice("git pull succeeded.")
-    } else {
-      S.error("git pull failed.")
+  def updatews(project: Project): JsCmd = {
+    ProjectHelper.updateWorkspace(project) match {
+      case Full(x) => S.notice(x.toString)
+      case Failure(x, _, _) => S.error(x.toString)
+      case Empty => S.error("Update workspace failed.")
     }
     Noop
   }

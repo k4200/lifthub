@@ -1,6 +1,11 @@
 package net.lifthub {
 package lib {
 
+import java.io._
+
+import net.liftweb.common._
+import net.liftweb.util.Helpers._
+
 import net.lifthub.model.User
 import net.lifthub.model.Project
 
@@ -15,8 +20,6 @@ import lib._
 import api.Git
 import storage.file.{FileRepository, FileRepositoryBuilder}
 import transport.{Transport, RefSpec, RemoteConfig, URIish}
-
-import java.io._
 
 
 /**
@@ -342,7 +345,6 @@ object GitosisHelper {
 
 // ------------------------------------------------
 object SbtHelper {
-  import net.liftweb.util.Helpers._
   import net.liftweb.common._
   import net.liftweb.mapper._
   //import xsbt.Process._
@@ -405,14 +407,13 @@ object SbtHelper {
 object ProjectHelper {
   // for debug
   def main(args: Array[String]) {
-    val projectInfo = ProjectInfo("foo", TemplateType.Mvc, "2.2")
-    val user = new User
-    user.email.set("kashima@shibuya.scala-users.org")
-    user.sshKey.set("ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAIEAjz+vWAw0gf7PGUBkVO12HEuDzId08c/uv2kGQmhA7GRZ+Aw8SMhVAua3Vy7Ob21AhWkPfE/1/oiVTWTZSUhuoGtcxcP+0lL13GB5DHABr6eWH9CE11qxBAYs/wk+c7xMMj3Igh2MZvTydVr1useq4f1npiJ8+bzCMJiSKtNhHcs= kashima@shibuya.scala-users.org")
-    
-    addUserToGitosis(projectInfo, user)
-    copyTemplate(projectInfo)
-    commitAndPushProject(projectInfo)
+    import net.liftweb.mapper._
+    import bootstrap.liftweb.Boot
+    val boot = new Boot
+    boot.boot
+
+    val project = Project.find(By(Project.id, 2)).get
+    updateWorkspace(project)
   }
 
   /**
@@ -436,6 +437,17 @@ object ProjectHelper {
 
   def deleteProject(projectInfo: ProjectInfo) = {
     CommonsFileUtils.deleteDirectory(projectInfo.path)
+  }
+
+  def updateWorkspace(project: Project): Box[String] = {
+    tryo {
+      val pi = ProjectInfo(project)
+      println("deleting the old workspace.")
+      deleteProject(pi)
+      println("cloning the branch.")
+      cloneProject(pi)
+      "Updating workspace succeeded."
+    }
   }
 
   //TODO shoud be private --------
@@ -486,6 +498,16 @@ object ProjectHelper {
     true
   }
 
+  //TODO Write test cases.
+  def cloneProject(projectInfo: ProjectInfo) = {
+    val destDir = projectInfo.path
+    Git.cloneRepository.setURI(projectInfo.gitRepoRemote)
+      .setDirectory(destDir).call
+  }
+
+  /**
+   * @deprecated
+   */
   def pullProject(project: Project): Boolean = {
     val projectInfo = ProjectInfo(project)
     val builder = new FileRepositoryBuilder()
