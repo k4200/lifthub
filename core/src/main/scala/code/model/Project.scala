@@ -34,7 +34,7 @@ with AggregateFunctions[Project]
   override def dbTableName = "projects"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
-  override def validation = List(checkNumberOfProjects, checkSshKey)
+  override def validation = List(checkNumberOfProjects, checkSshKey, checkSpecialNames)
 
   override def beforeCreate = List(
     checkNumberOfProjects,
@@ -67,6 +67,15 @@ with AggregateFunctions[Project]
       case _ =>
         List(FieldError(Project.name,
                         Text(S.??("validation.general.require.login"))))
+    }
+  }
+
+  private def checkSpecialNames(project: Project): List[FieldError] = {
+    //TODO Temporary
+    if (project.name == "www") {
+      List(FieldError(Project.name, Text(project.name + " can't be used.")))
+    } else {
+      Nil
     }
   }
 
