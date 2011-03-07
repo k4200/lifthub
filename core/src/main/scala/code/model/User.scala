@@ -1,12 +1,13 @@
 package net.lifthub {
 package model {
 
-import scala.xml.{ NodeSeq, Text }
+import scala.xml.{ NodeSeq, Text, Elem }
 
 import _root_.net.liftweb.mapper._
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._
 import Helpers._
+import Mailer._
 import net.liftweb.http._
 import net.liftweb.sitemap._
 import Loc._
@@ -79,8 +80,7 @@ object User extends User with MetaMegaProtoUser[User] {
     Full(Menu(Loc("Invite", invitePath, S.??("invite"), inviteMenuLocParams)))
 
   protected def inviteMenuLocParams: List[LocParam[Unit]] =
-    //snarfLastItem is defined in ProtoUser.
-    //Template(() => wrapIt(invite(snarfLastItem))) ::
+    //'wrapIt' wraps the html piece with the template.
     //Template(() => invite(S.request)) ::
     Template(() => wrapIt(invite(S.request))) ::
     If(superUser_? _, S.??("requires.superuser")) ::
@@ -90,12 +90,15 @@ object User extends User with MetaMegaProtoUser[User] {
    * 
    */
   def invite(request: Box[Req]): NodeSeq = {
+    import org.apache.commons.lang.RandomStringUtils
     val theUser = createNewUserInstance
     def testInvite() {
+      val plainPassword = RandomStringUtils.randomAlphanumeric(8)
+      theUser.password(plainPassword)
       validateInvite(theUser) match {
         case Nil =>
           theUser.save
-          sendValidationEmail(theUser)
+          sendValidationEmail(theUser, plainPassword)
           S.notice(S.??("invite.finish"))
           S.redirectTo(homePage)
         case xs => S.error(xs) ; innerInvite _
@@ -109,17 +112,67 @@ object User extends User with MetaMegaProtoUser[User] {
 
   def validateInvite(user: TheUserType): List[FieldError] = user.validate
 
+  def inviteFields: List[FieldPointerType] =
+    List(firstName, lastName, email)
+
   def inviteXhtml(user: TheUserType) = {
     // The same code as the signupXhtml except the label.
-    //TODO How to specify password?
     (<form method="post" action={S.uri}>
        <table>
          <tr><td colspan="2">{ S.??("invite") }</td></tr>
-          {localForm(user, false, signupFields)}
+          {localForm(user, false, inviteFields)}
          <tr><td>&nbsp;</td><td><user:submit/></td></tr>
         </table>
      </form>)
   }
+
+  /**
+   * Mail body of invitaion mail.
+   * Overrides signupMailBody so that we can use sendValidationEmail
+   * in invite method. Otherwise, we would have to create a new method
+   * that would be almost the same as sendValidationEmail.
+   */
+  def signupMailBody(user: TheUserType, validationLink: String, plainPassword: String): Elem = {
+    //TODO Make the message to a resource.
+    (<html>
+        <head>
+          <title>{S.??("sign.up.confirmation")}</title>
+        </head>
+        <body>
+          <p>{S.??("dear")} {user.getFirstName},
+            <br/>
+            <br/>
+            {S.??("sign.up.validation.link")}
+            <br/><a href={validationLink}>{validationLink}</a>
+            <br/>Your initial password is shown below:
+            <br/> {plainPassword} 
+            <br/>Please change it first time you log in.
+            <br/>
+            {S.??("thank.you")}
+          </p>
+        </body>
+     </html>)
+  }
+  
+  def sendValidationEmail(user: TheUserType, plainPassword: String) {
+    val resetLink = S.hostAndPath+"/"+validateUserPath.mkString("/")+
+    "/"+urlEncode(user.getUniqueId())
+
+    val email: String = user.getEmail
+
+    val msgXml = signupMailBody(user, resetLink, plainPassword)
+
+    Mailer.sendMail(From(emailFrom),Subject(signupMailSubject),
+                    (To(user.getEmail) ::
+                     generateValidationEmailBodies(user, resetLink, plainPassword) :::
+                     (bccEmail.toList.map(BCC(_)))) :_* )
+  }
+
+  protected def generateValidationEmailBodies(user: TheUserType,
+                                              resetLink: String,
+                                              plainPassword: String):
+  List[MailBodyType] = List(xmlToMailBodyType(signupMailBody(user, resetLink, plainPassword)))
+
 }
 
 /**
@@ -130,13 +183,6 @@ class User extends MegaProtoUser[User] {
   val MAX_NUM_PROJECTS = 1
 
   def getSingleton = User // what's the "meta" server
-
-  //Just for testing when I was answering the question on the URL below.
-  // http://stackoverflow.com/questions/4210169/scala-lift-remove-locale-and-time-zone-from-sign-up/4715542#4715542
-//   import _root_.scala.xml.Text
-//   override lazy val locale = new MyLocale(this) {
-//     override val fieldId = Some(Text(null))
-//   }
 
   object sshKey extends MappedTextarea(this, 1024) {
     override def dbColumnName = "ssh_key"
@@ -150,6 +196,7 @@ class User extends MegaProtoUser[User] {
    */
   def registerSshKey: Unit = {
     //TODO This doesn't seem to register a new key to the repository.
+    // Maybe it should remove the existing key and register a new one.
     GitosisHelper.createSshKey(this)
     GitosisHelper.gitAddSshKey(this)
     GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id, true)
