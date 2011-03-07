@@ -60,7 +60,9 @@ class ProjectOperations {
   }
 
   def showLog(path: String): JsCmd = {
-    SetHtml("log", Text(scala.io.Source.fromFile(path).mkString))
+    import scala.io.Source
+    //SetHtml("log", Text(Source.fromFile(path).mkString.replaceAll("\n", "<br />")))
+    SetHtml("log", Text(Source.fromFile(path).mkString))
   }
 
   def execute(project: Project, name: String, func: Project => Box[Any]): JsCmd = {
