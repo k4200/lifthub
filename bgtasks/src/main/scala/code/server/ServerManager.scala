@@ -49,7 +49,7 @@ object ServerManagerCore {
   /**
    * Converts results from the executor to Box.
    */
-  def convertResult(result: Option[String]): Box[Any] = {
+  def convertResult(result: Option[Any]): Box[Any] = {
     result match {
       case Some(Full(x)) => Full(x)
       case Some(Failure(x,y,z)) => Failure(x,y,z)
@@ -79,15 +79,6 @@ class ServerManager extends Actor {
   import net.lifthub.common.event._
   import net.lifthub.model.Project._
   def receive = {
-    def projectNotFound = {
-      //TODO ERROR  
-      self.reply(Response.FAILED)
-      println("failed to start " + projectId)
-    }
-    def unexpectedResult = {
-      println("unknown error...")
-      self.reply(Response.FAILED)
-    }
     case Start(projectId) => 
       Project.find(By(Project.id, projectId)) match {
         case Full(project) =>
@@ -103,7 +94,7 @@ class ServerManager extends Actor {
               self.reply(Response.FAILED)
             case _ => unexpectedResult
           }
-        case _ => projectNotFound
+        case _ => projectNotFound(projectId)
       }
     case Stop(projectId) => 
       Project.find(By(Project.id, projectId)) match {
@@ -119,7 +110,7 @@ class ServerManager extends Actor {
               self.reply(Response.FAILED)
             case _ => unexpectedResult
           }
-        case _ => projectNotFound
+        case _ => projectNotFound(projectId)
       }
     case Clean(projectId) => 
       Project.find(By(Project.id, projectId)) match {
@@ -133,9 +124,18 @@ class ServerManager extends Actor {
               self.reply(Response.FAILED)
             case _ => unexpectedResult
           }
-        case _ => projectNotFound
+        case _ => projectNotFound(projectId)
       }
     case _ => log.slf4j.info("error")
+  }
+  def projectNotFound(projectId: Long) = {
+    //TODO ERROR  
+    self.reply(Response.FAILED)
+    println("failed to start " + projectId)
+  }
+  def unexpectedResult = {
+    println("unknown error...")
+    self.reply(Response.FAILED)
   }
 }
 

@@ -23,6 +23,7 @@ class JettyExecutor extends Actor {
 
   val TIMEOUT = 30000
   val KEYWORD_SUCCESS = "INFO::Started"
+  //TODO add '======= Backtrace: ========='
   val KEYWORD_FAILURE = "Exception"
 
   /**
@@ -44,7 +45,7 @@ class JettyExecutor extends Actor {
 	Full("stopped")
       })
     case Clean(serverInfo) =>
-      val cmd = List("sudo", COMMAND, "clean", server.projectName)
+      val cmd = List("sudo", COMMAND, "clean", serverInfo.projectName)
       self.reply(tryo {
         execute(serverInfo, cmd)
   	Full("cleand up")
