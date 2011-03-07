@@ -214,6 +214,10 @@ with UserEditableKeyedMapper[Long, Project]
     override def dbDisplay_? = false
     override def dbColumnName = "status"
   }
+
+  // The below methods are a temporary solution.
+  lazy val info = ProjectInfo(this)
+  lazy val server = ServerInfo(this)
 }
 
 

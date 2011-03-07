@@ -167,6 +167,8 @@ case class ProjectInfo (name: String, templateType: TemplateType.Value, version:
   def warPath = path + ("/target/scala_%s/lift-sbt-template_%s-0.1.war"
                         .format(SCALA_VER, SCALA_VER))
 
+  def sbtLogPath = path + "sbt.log"
+
   val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
 }
 object ProjectInfo {
@@ -372,12 +374,17 @@ object SbtHelper {
   }
 
   def runCommand(project: Project, command: String): Box[String] = {
+    import org.apache.commons.exec._
     val pi = ProjectInfo(project)
-    println("pi.path: " + pi.path) //Debug
-    val pb = (new java.lang.ProcessBuilder("./sbt", command)) directory pi.path
+    val executor = new DefaultExecutor
+    executor.setWorkingDirectory(pi.path)
+    val cmdLine = new CommandLine("./sbt")
+    cmdLine.addArgument(command)
+    val streamHandler = new PumpStreamHandler(
+      new FileOutputStream(new File(pi.sbtLogPath)))
+    executor.setStreamHandler(streamHandler)
     tryo {
-      val proc = pb.start
-      val resultCode = proc.waitFor
+      val resultCode = executor.execute(cmdLine)  // synchronous
       if (resultCode == 0) {
 	Full("'sbt %s' succeeded.".format(command))
       } else {

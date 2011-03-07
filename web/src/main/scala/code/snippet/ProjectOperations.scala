@@ -59,6 +59,10 @@ class ProjectOperations {
     Noop
   }
 
+  def showLog(path: String): JsCmd = {
+    SetHtml("log", Text(scala.io.Source.fromFile(path).mkString))
+  }
+
   def execute(project: Project, name: String, func: Project => Box[Any]): JsCmd = {
     func(project) match {
       case Full(x) => S.notice(x.toString)
@@ -70,10 +74,12 @@ class ProjectOperations {
 
   def update(project: Project): JsCmd = {
     execute(project, "update", SbtHelper.update)
+    showLog(project.info.sbtLogPath)
   }
 
   def build(project: Project): JsCmd = {
     execute(project, "build", SbtHelper.makePackage)
+    showLog(project.info.sbtLogPath)
   }
 
   def deploy(project: Project): JsCmd = {
@@ -82,12 +88,14 @@ class ProjectOperations {
 
   def start(project: Project): JsCmd = {
     execute(project, "start", ServerManagerClient.startServer)
-    changeButton(project)
+    changeButton(project) &
+    showLog(project.server.executeLogPath)
   }
 
   def stop(project: Project): JsCmd = {
     execute(project, "stop", ServerManagerClient.stopServer)
-    changeButton(project)
+    changeButton(project) &
+    showLog(project.server.executeLogPath)
   }
 
   def clean(project: Project): JsCmd = {
