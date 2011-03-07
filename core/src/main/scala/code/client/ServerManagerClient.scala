@@ -36,6 +36,14 @@ object ServerManagerClient {
     }
   }
 
+  def clean(project: Project): Box[String] = {
+    server !! (Clean(project.id.is), TIMEOUT) match {
+      case Some(x) if x == Response.CLEANED_UP  =>
+        Full("successfully cleaned up! " + project.id)
+      case _ => Failure("failed to clean the server environment for " + project.id)
+    }
+  }
+
   /**
    * For testing.
    */

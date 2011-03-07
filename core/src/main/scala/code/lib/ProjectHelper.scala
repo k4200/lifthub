@@ -442,9 +442,7 @@ object ProjectHelper {
   def updateWorkspace(project: Project): Box[String] = {
     tryo {
       val pi = ProjectInfo(project)
-      println("deleting the old workspace.")
       deleteProject(pi)
-      println("cloning the branch.")
       cloneProject(pi)
       "Updating workspace succeeded."
     }

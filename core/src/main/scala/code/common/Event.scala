@@ -4,6 +4,9 @@ package common.event {
 //import scala.reflect.BeanInfo
 //import akka.serialization.Serializable.ScalaJSON
 
+/**
+ * The parent of all the events that Server Manager handles.
+ */
 sealed trait Event
 
 /**
@@ -16,6 +19,14 @@ case class Start(projectId: Long) extends Event
 case class Stop(projectId: Long) extends Event
 
 
+/**
+ * Kills all the processes associated with the server
+ * and cleans the runtime environment.
+ * TODO Shouldn't this be here?
+ */
+case class Clean(projectId: Long) extends Event
+
+
 
 /**
  * Responses from ServerManager to client
@@ -23,6 +34,7 @@ case class Stop(projectId: Long) extends Event
 object Response {
   val STOPPED = "Stopped"
   val STARTED = "Started"
+  val CLEANED_UP = "Cleaned up"
   val FAILED = "Failed"
 }
 

@@ -33,6 +33,7 @@ class JettyExecutor extends Actor {
     case Start(serverInfo) =>
       val cmd = List("sudo", COMMAND, "start", serverInfo.projectName, serverInfo.stopPort.toString)
       self.reply(tryo {
+	killAll(serverInfo)
         execute(serverInfo, cmd)
         checkProcess(serverInfo)
       })
@@ -42,8 +43,17 @@ class JettyExecutor extends Actor {
         execute(serverInfo, cmd)
 	Full("stopped")
       })
+    case Clean(serverInfo) =>
+      val cmd = List("sudo", COMMAND, "clean", server.projectName)
+      self.reply(tryo {
+        execute(serverInfo, cmd)
+  	Full("cleand up")
+      })
   }
 
+  /**
+   * TODO Implement this.
+   */
   def kill(server: ServerInfo) = {
     val args = List("kill", server.projectName)
   }
@@ -53,8 +63,6 @@ class JettyExecutor extends Actor {
     cmd.tail.foreach(cmdLine.addArgument _)
 
     val executor = new DefaultExecutor
-    //executor.setWorkingDirectory(new File(server.basePath))
-    //executor.setWorkingDirectory(new File(server.JAIL_PARENT_DIR))
 
     val watchdog = new ExecuteWatchdog(TIMEOUT)
     executor.setWatchdog(watchdog)
@@ -70,6 +78,9 @@ class JettyExecutor extends Actor {
     println("JettyExecutor.execute finished.")
   }
 
+  /**
+   * Checks if the server has been started correctly.
+   */
   def checkProcess(serverInfo: ServerInfo): Box[String] = {
     def parseLog(serverInfo: ServerInfo): Box[Boolean] = {
       val log = scala.io.Source.fromFile(serverInfo.executeLogPath).mkString
@@ -103,6 +114,15 @@ class JettyExecutor extends Actor {
       Thread.sleep(1000) //TODO
     }
     return Failure("Unknown error")
+  }
+
+  /**
+   * Kills all the remaining processes associated with this server.
+   */
+  def killAll(serverInfo: ServerInfo) = {
+    //TODO Implement this.
+    // For now, kill the process of the pid in the pid file. 
+    kill(serverInfo)
   }
 
 }

@@ -29,6 +29,7 @@ class ProjectOperations {
         ".deploy *" #> SHtml.ajaxButton(Text("Deploy"), () => deploy(p)) &
         ".process [id]" #> ("process-" + p.id.toString) &
         ".process *" #> processButton(p) &
+        ".clean *" #> SHtml.ajaxButton(Text("Clean"), () => clean(p)) &
         ".process [href]" #> ""
       })
   }
@@ -89,6 +90,9 @@ class ProjectOperations {
     changeButton(project)
   }
 
+  def clean(project: Project): JsCmd = {
+    execute(project, "clean", ServerManagerClient.clean)
+  }
 }
 
 }

@@ -14,6 +14,12 @@ case class Start(serverInfo: ServerInfo) extends InternalEvent
  */
 case class Stop(serverInfo: ServerInfo) extends InternalEvent
 
+/**
+ * Kills all the processes of the server and cleans up the runtime
+ * environment
+ */
+case class Clean(serverInfo: ServerInfo) extends InternalEvent
+
 
 
 }

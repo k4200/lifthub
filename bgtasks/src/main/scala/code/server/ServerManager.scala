@@ -24,6 +24,7 @@ import bootstrap.liftweb.Boot
 /**
  * Sends messages to Actors for different servers, such as
  * Jetty and Tomcat.
+ * Looks a bit redundant.
  */
 object ServerManagerCore {
   import internalevent._
@@ -34,16 +35,22 @@ object ServerManagerCore {
   executor.start
 
   def start(server: ServerInfo): Box[Any] = {
-    executor !! (Start(server), TIMEOUT) match {
-      case Some(Full(x)) => Full(x)
-      case Some(Failure(x,y,z)) => Failure(x,y,z)
-      case Some(_) => Failure("This shouldn't happen.")
-      case None => Failure("timeout")
-    }
+    convertResult(executor !! (Start(server), TIMEOUT))
   }
 
   def stop(server: ServerInfo): Box[Any] = {
-    executor !! (Stop(server), TIMEOUT) match {
+    convertResult(executor !! (Stop(server), TIMEOUT))
+  }
+
+  def clean(server: ServerInfo): Box[Any] = {
+    convertResult(executor !! (Clean(server), TIMEOUT))
+  }
+
+  /**
+   * Converts results from the executor to Box.
+   */
+  def convertResult(result: Option[String]): Box[Any] = {
+    result match {
       case Some(Full(x)) => Full(x)
       case Some(Failure(x,y,z)) => Failure(x,y,z)
       case Some(_) => Failure("This shouldn't happen.")
@@ -72,27 +79,31 @@ class ServerManager extends Actor {
   import net.lifthub.common.event._
   import net.lifthub.model.Project._
   def receive = {
+    def projectNotFound = {
+      //TODO ERROR  
+      self.reply(Response.FAILED)
+      println("failed to start " + projectId)
+    }
+    def unexpectedResult = {
+      println("unknown error...")
+      self.reply(Response.FAILED)
+    }
     case Start(projectId) => 
       Project.find(By(Project.id, projectId)) match {
         case Full(project) =>
           val server = ServerInfo(project)
           ServerManagerCore.start(server) match {
             case Full(x) =>
-	      project.status(Status.Running)
-	      project.save
-	      self.reply(Response.STARTED)
-	      println("started " + projectId)
+              project.status(Status.Running)
+              project.save
+              self.reply(Response.STARTED)
+              println("started " + projectId)
             case Failure(x, _, _) =>
               println(x)
               self.reply(Response.FAILED)
-            case _ =>
-              println("unknown error...")
-              self.reply(Response.FAILED)
+            case _ => unexpectedResult
           }
-        case _ =>
-          //TODO ERROR  
-          self.reply(Response.FAILED)
-          println("failed to start " + projectId)
+        case _ => projectNotFound
       }
     case Stop(projectId) => 
       Project.find(By(Project.id, projectId)) match {
@@ -100,20 +111,29 @@ class ServerManager extends Actor {
           val server = ServerInfo(project)
           ServerManagerCore.stop(server) match {
             case Full(x) =>
-	      project.status(Status.Stopped)
-	      project.save
-	      self.reply(Response.STOPPED)
+              project.status(Status.Stopped)
+              project.save
+              self.reply(Response.STOPPED)
             case Failure(x, _, _) =>
               println(x)
               self.reply(Response.FAILED)
-            case _ =>
-              println("unknown error...")
+            case _ => unexpectedResult
+          }
+        case _ => projectNotFound
+      }
+    case Clean(projectId) => 
+      Project.find(By(Project.id, projectId)) match {
+        case Full(project) =>
+          val server = ServerInfo(project)
+          ServerManagerCore.clean(server) match {
+            case Full(x) =>
+              self.reply(Response.CLEANED_UP)
+            case Failure(x, _, _) =>
+              println(x)
               self.reply(Response.FAILED)
-	  }
-        case _ =>
-          //TODO ERROR  
-          self.reply(Response.FAILED)
-          println("failed to stop " + projectId)
+            case _ => unexpectedResult
+          }
+        case _ => projectNotFound
       }
     case _ => log.slf4j.info("error")
   }
