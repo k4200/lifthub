@@ -145,6 +145,9 @@ with AggregateFunctions[Project]
 
     // Remove the project files.
     ProjectHelper.deleteProject(pi)
+
+    // Delete the nginx conf file.
+    NginxConf.remove(project)
   })
 
   private[model] def getAvailablePort: Int = {
