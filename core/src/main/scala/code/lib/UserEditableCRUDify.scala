@@ -44,6 +44,14 @@ extends CRUDify [KeyType, CrudType] {
   override def editMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
   override def deleteMenuLocParams: List[Loc.AnyLocParam] = List(loggedIn_?);
 
+  override def findForListParams: List[QueryParam[CrudType]] =
+    ((for(userIdStr <- self.userObject.currentUserId;
+         userId <- tryo{userIdStr.toInt})
+    yield
+      List(By(self.userId, userId))
+    ) openOr Nil) ::: super.findForListParams
+
+
   def findAllOfOwner: List[TheCrudType] = {
     (for(userIdStr <- self.userObject.currentUserId;
          userId <- tryo{userIdStr.toInt})
