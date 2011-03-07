@@ -5,6 +5,9 @@ import java.io.FileWriter
 
 import org.apache.commons.io.{FileUtils => CommonsFileUtils}
 
+import akka.actor.Actor
+import akka.actor.Actor._
+
 // JGit
 import org.eclipse.jgit._
 import lib._
@@ -16,13 +19,26 @@ import FileUtils._
 import net.lifthub.model.User
 
 
-
+trait GitosisEvent
+case class AddEntry2Conf(projectInfo: ProjectInfo, user: User) extends GitosisEvent
+case class RemoveEntryFromConf(projectInfo: ProjectInfo) extends GitosisEvent
+case object GitAddConf extends GitosisEvent
+case class GitAddSshKey(user: User) extends GitosisEvent
+case class GitCommitAndPush(message: String, dryRun: Boolean) extends GitosisEvent
 
 /**
- * Utilities that handle gitosis
- * TODO non thread safe
+ * Makes the operations on gitosis-admin (and other stuff) thread safe
+ * by using an Actor.
  */
-object GitosisHelper {
+private class GitosisOperationsSynchronizer extends Actor {
+  def receive = {
+    case AddEntry2Conf(pi, u) => addEntry2Conf(pi, u)
+    case RemoveEntryFromConf(pi) => removeEntryFromConf(pi)
+    case GitAddConf => gitAddConf
+    case GitAddSshKey(u) => gitAddSshKey(u)
+    case GitCommitAndPush(message, dryRun) => commitAndPush(message, dryRun)
+  }
+
   val adminEmail = "lifthub@localhost.localdomain"
 
   val gitosisAdminPath = ProjectInfo.basePath + "/gitosis-admin"
@@ -43,17 +59,18 @@ object GitosisHelper {
   /**
    * Adds an entry to gitosis.conf
    */
-  def addEntry2Conf(projectInfo: ProjectInfo, user: User): Boolean = {
-    FileUtils.printToFile(new FileWriter(conf, true))(writer => {
+  def addEntry2Conf(projectInfo: ProjectInfo, user: User) = {
+    self.reply(FileUtils.printToFile(new FileWriter(conf, true))(writer => {
       writer.println(generateConfEntryString(projectInfo, user))
       writer.println //newLine
-    })
+    }))
   }
 
   /**
    * Removes the entry of the project from gitosis.conf
    */
-  def removeEntryFromConf(projectInfo: ProjectInfo): Boolean = {
+  def removeEntryFromConf(projectInfo: ProjectInfo) = {
+    self.reply({
     val tempFile = java.io.File.createTempFile("gitosis", "conf")
     import scala.io.Source
     
@@ -80,6 +97,7 @@ object GitosisHelper {
         e.printStackTrace
         false
     }
+    })
   }
 
   /**
@@ -99,10 +117,12 @@ object GitosisHelper {
   /**
    * Adds the conf file to the list of the files to be committed.
    */
-  def gitAddConf(): Boolean = {
+  def gitAddConf() = {
+    self.reply({
     val git = new Git(gitosisRepo)
     git.add().addFilepattern(conf.relativePath).call()
     true
+    })
   }
 
   def createSshKey(user: User): Boolean = {
@@ -111,23 +131,27 @@ object GitosisHelper {
     })
   }
 
-  def gitAddSshKey(user: User): Boolean = {
+  def gitAddSshKey(user: User) = {
+    self.reply({
     val git = new Git(gitosisRepo)
     val dirCache = git.add().addFilepattern(keyFile(user).relativePath).call()
     //val dirCache = git.add().addFilepattern("fail").call()
     true
+    })
   }
 
   /**
-   *
+   * Returns Boolean
    */
-  def commitAndPush(message: String, dryRun: Boolean = false): Boolean = {
+  def commitAndPush(message: String, dryRun: Boolean = false) = {
+    self.reply({
     val git = new Git(gitosisRepo)
     git.commit().setMessage(message).call()
 
     val refSpec = new RefSpec("refs/heads/master")
     git.push().setRefSpecs(refSpec).setRemote(gitAdminRepoRemote).setDryRun(dryRun).call()
     true
+    })
   }
 
   // for debug
@@ -165,10 +189,69 @@ object GitosisHelper {
       case e: Exception => e.getCause.printStackTrace
     }
   }
+}
 
-  def main(args: Array[String]) {
-    val pi = ProjectInfo("foo", TemplateType.Mvc, "2.2")
-    removeEntryFromConf(pi)
+/**
+ * Utilities that handle gitosis
+ */
+object GitosisHelper {
+  val gitosisAdminPath = ProjectInfo.basePath + "/gitosis-admin"
+  val keydirName = "keydir"
+  val keydir = Path(gitosisAdminPath, keydirName)
+  def keyFileName(user: User): String = user.email + ".pub"
+  def keyFile(user: User): Path = keydir + keyFileName(user)
+
+  val synchronizer = actorOf[GitosisOperationsSynchronizer]
+  synchronizer.start
+
+  private def replyHandler(reply: Option[Any]): Boolean = {
+    reply match {
+      case x: Some[Boolean] => x.get
+      case x: Some[Unit] => true
+      case Some(_) => { println("This shouldn't happen."); false }
+      case None => { println("timeout"); false }
+    }
+  }
+
+  /**
+   * Adds an entry to gitosis.conf
+   */
+  def addEntry2Conf(projectInfo: ProjectInfo, user: User): Boolean = {
+    replyHandler(synchronizer !! AddEntry2Conf(projectInfo, user))
+  }
+
+  /**
+   * Removes the entry of the project from gitosis.conf
+   */
+  def removeEntryFromConf(projectInfo: ProjectInfo): Boolean = {
+    replyHandler(synchronizer !! RemoveEntryFromConf(projectInfo))
+  }
+
+  /**
+   * Adds the conf file to the list of the files to be committed.
+   */
+  def gitAddConf(): Boolean = {
+    replyHandler(synchronizer !! GitAddConf)
+  }
+
+  /**
+   *
+   */
+  def createSshKey(user: User): Boolean = {
+    FileUtils.printToFile(keyFile(user))(writer => {
+      writer.write(user.sshKey)
+    })
+  }
+
+  def gitAddSshKey(user: User): Boolean = {
+    replyHandler(synchronizer !! GitAddSshKey(user))
+  }
+
+  /**
+   *
+   */
+  def commitAndPush(message: String, dryRun: Boolean = false): Boolean = {
+    replyHandler(synchronizer !! GitCommitAndPush(message, dryRun))
   }
 }
 
