@@ -1,8 +1,11 @@
 package net.lifthub {
 package model {
 
+import scala.xml.NodeSeq
+
 import net.liftweb._
 import util.{FieldError,FieldIdentifier,StringValidators}
+import util.BindHelpers._
 import common._
 import mapper._
 import http.S
@@ -155,6 +158,37 @@ with AggregateFunctions[Project]
     if (maxport != 0) maxport.toInt + 1
     else PORT_RANGE._1
   }
+
+  // Disable the Edit menu
+  override def editMenuLoc = Empty
+  override def _showAllTemplate =
+  <lift:crud.all>
+    <table id={showAllId} class={showAllClass}>
+      <thead>
+        <tr>
+          <crud:header_item><th><crud:name/></th></crud:header_item>
+          <th>&nbsp;</th>
+          <th>&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody>
+        <crud:row>
+          <tr>
+            <crud:row_item><td><crud:value/></td></crud:row_item>
+            <td><a crud:view_href="">{S.??("View")}</a></td>
+            <td><a crud:delete_href="">{S.??("Delete")}</a></td>
+          </tr>
+        </crud:row>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3"><crud:prev>{previousWord}</crud:prev></td>
+          <td colspan="3"><crud:next>{nextWord}</crud:next></td>
+        </tr>
+      </tfoot>
+    </table>
+  </lift:crud.all>
+
 }
 
 class Project extends LongKeyedMapper[Project]
