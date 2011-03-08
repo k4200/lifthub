@@ -52,6 +52,8 @@ extends DefaultWebProject(info) {
   // If you're using JRebel for Lift development, uncomment
   // this line
   // override def scanDirectories = Nil
+
+  override val jettyPort = 7080
 }
 
 protected class BgProject(info: ProjectInfo) extends DefaultProject(info)
