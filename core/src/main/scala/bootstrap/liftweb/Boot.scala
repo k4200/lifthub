@@ -63,10 +63,12 @@ class Boot {
     def sitemap = SiteMap(
       List(
         Menu.i("Home") / "index" >> User.AddUserMenusAfter,
-        Menu.i("Project") / "project" submenus
+        Menu.i("Project") / "project" submenus (
           Project.menus
-          ::: List(Menu.i("Operations") / "projects" / "operate") rule (loggedIn)
-          //::: UserDatabase.menus
+          ::: List(Menu.i("Operations") / "projects" / "operate")
+        ) rule (loggedIn),
+        Menu.i("Database") / "database" submenus UserDatabase.menus 
+          rule (loggedIn)
       ): _* )
 
       // more complex because this menu allows anything in the

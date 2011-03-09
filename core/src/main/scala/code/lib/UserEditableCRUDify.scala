@@ -14,7 +14,7 @@ import util.Helpers.tryo
 trait UserEditableCRUDify [KeyType,
                            CrudType <: UserEditableKeyedMapper[KeyType, CrudType]]
 //TODO UserType <: ProtoUser[UserType] ?
-extends CRUDify [KeyType, CrudType] {
+extends MegaCRUDify [KeyType, CrudType] {
   self: CrudType with KeyedMetaMapper[KeyType, CrudType] =>
 
   //TODO Implement the other actions.

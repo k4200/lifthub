@@ -28,10 +28,21 @@ with UserEditableCRUDify[Long, UserDatabase] {
     create.name(project.name).databaseType(dbType).username(project.name).password(plainPassword)
   }
 
-  override def afterSave = List(userDatabase =>  {
+  override def afterCreate = List(userDatabase =>  {
     val dbHelper = DbHelper.get(userDatabase.databaseType.is)
     dbHelper.addDatabase(userDatabase)
   })
+
+  override def afterDelete = List(userDatabase =>  {
+    val dbHelper = DbHelper.get(userDatabase.databaseType.is)
+    dbHelper.dropDatabase(userDatabase)
+  })
+
+  override def fieldsForEditing = List(password)
+
+  // Disable the Edit menu
+  override def createMenuLoc = Empty
+  override def editMenuLoc = Empty
 }
 
 
