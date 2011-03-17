@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+    <title>Logs</title>
+  </head>
+  <body class="lift:content_id=main">
+    <div id="main" class="lift:surround?with=default;at=content">
+      <h2>View Log</h2>
+      <!-- project list -->
+      <form class="lift:log.listProject list_project">
+        <ul>
+          <li class="project"><span class="button"></span></li>
+        </ul>
+      </form>
+
+      <!-- logs of the project -->
+      <div class="lift:log.logMenu log_menu clearable">
+        <a href="/log">Back</a>
+        <ul class="lift:log.otherLogs other_logs">
+          <li class="server"></li>
+          <li class="sbt"></li>
+        </ul>
+
+        <table>
+          <thead>
+            <tr>
+              <th>File name</th>
+              <th>Show</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="lift:log.accessLog access_log">
+              <td class="name"></td>
+              <td class="show"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div> <!-- log_menu -->
+      <div id="log"></div>  
+    </div>
+  </body>
+</html>
+
