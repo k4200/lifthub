@@ -21,7 +21,7 @@ import net.lifthub.client._
 class ProjectOperations {
   def listAll: CssBindFunc = {
     ".project *" #> 
-      Project.findAllOfOwner.map(p => {
+      Project.findAllByCurrentUser.map(p => {
 	".name *" #> p.name &
         ".updatews *" #> SHtml.ajaxButton(Text("Update WS"), () => updatews(p)) &
         ".update *" #> SHtml.ajaxButton(Text("Update"), () => update(p)) &

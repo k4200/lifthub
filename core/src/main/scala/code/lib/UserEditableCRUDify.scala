@@ -51,14 +51,20 @@ extends MegaCRUDify [KeyType, CrudType] {
       List(By(self.userId, userId))
     ) openOr Nil) ::: super.findForListParams
 
+  /**
+   * Finds all the records of the current logged-in user.
+   */
+  def findAllByCurrentUser: List[TheCrudType] = 
+    findAll(findForListParams: _*)
 
-  def findAllOfOwner: List[TheCrudType] = {
-    (for(userIdStr <- self.userObject.currentUserId;
-         userId <- tryo{userIdStr.toInt})
-    yield
-      findAll(By(self.userId, userId))
-    ) openOr Nil
-  }
+  /**
+   * Finds a record of the current logged-in user that matches 
+   * the given query parameters.
+   */
+  def findByCurrentUser(by: QueryParam[TheCrudType]): List[TheCrudType] =
+    findAll((by :: findForListParams): _*)
+  def findByCurrentUser(by: List[QueryParam[TheCrudType]]): List[TheCrudType] =
+    findAll((by ::: findForListParams): _*)
 }
 
 trait UserEditableKeyedMapper[KeyType, OwnerType <: KeyedMapper[KeyType, OwnerType]]
@@ -67,7 +73,6 @@ extends KeyedMapper[KeyType, OwnerType] {
   self: OwnerType =>
 
   val userObject: GenProtoUser
-
   lazy val userId: MappedLong[OwnerType] = new MyUserId(this)
   protected class MyUserId(obj: OwnerType) extends MappedLong(obj) {
     override def dbIndexed_? = true

@@ -49,7 +49,9 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
   val deployDirPath = jailRootPath + basePath + "/userwebapps/" + projectName
   val confPath = jailRootPath + basePath + "/etc/lifthub/" + projectName + ".xml"
   val templatePath = basePath + "/etc/jetty.xml.tmpl"
-  val executeLogPath = jailRootPath + basePath + "/logs/" + projectName + "-execute.log"
+  val logDirPath = jailRootPath + basePath + "/logs"
+  val executeLogPath = logDirPath + "/" + projectName + "-execute.log"
+
   //val pidFilePath = jailRootPath + basePath + "/logs/" + projectName + ".pid"
   val stopPort = port + 1000 //TODO
 
