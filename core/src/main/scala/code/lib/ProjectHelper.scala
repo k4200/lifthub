@@ -225,9 +225,18 @@ object SbtHelper {
     }
   }
 
+  def sbtExists_?(pi: ProjectInfo): Boolean = {
+    new File(pi.path + "/sbt").exists
+  }
+
   def runCommand(project: Project, command: String): Box[String] = {
     import org.apache.commons.exec._
     val pi = ProjectInfo(project)
+
+    if (!sbtExists_?(pi)) {
+      return Failure("sbt doesn't exist. Maybe, you need to update workspace first?")
+    }
+
     val executor = new DefaultExecutor
     executor.setWorkingDirectory(pi.path)
     val cmdLine = new CommandLine("./sbt")
