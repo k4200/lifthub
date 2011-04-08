@@ -213,8 +213,12 @@ object SbtHelper {
     //TODO Hot deploy.
     val pi = ProjectInfo(project)
     val si = ServerInfo(project)
+    if (!(new File(pi.warPath)).exists) {
+      return Failure("war file doesn't exist. Build first.")
+    }
     tryo {
       CommonsFileUtils.copyFile(pi.warPath, si.deployDirPath + "/ROOT.war")
+      pi.warPath.delete
       Full("Project %s successfully deployed.".format(project.name))
     } openOr {
       Failure("Failed to deploy.")
