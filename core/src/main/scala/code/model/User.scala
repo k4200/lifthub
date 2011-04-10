@@ -195,11 +195,9 @@ class User extends MegaProtoUser[User] {
    *
    */
   def registerSshKey: Unit = {
-    //TODO This doesn't seem to register a new key to the repository.
-    // Maybe it should remove the existing key and register a new one.
     GitosisHelper.createSshKey(this)
     GitosisHelper.gitAddSshKey(this)
-    GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id, true)
+    GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id)
   }
 
   /**
