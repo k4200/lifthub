@@ -8,6 +8,7 @@ import net.liftweb.util.Helpers._
 
 import net.lifthub.model.User
 import net.lifthub.model.Project
+import net.lifthub.model.ProjectTemplate
 
 import org.apache.commons.io.{FileUtils => CommonsFileUtils}
 
@@ -150,15 +151,13 @@ object NginxConf {
 // ------------------------------------------------
 /**
  * Project information
- * TODO Add databaseType: MySQL, PostgreSQL etc.
  * TODO Merge this into Project?
  */
-case class ProjectInfo (name: String, templateType: TemplateType.Value, version: String) {
+case class ProjectInfo (name: String, projectTemplate: ProjectTemplate) {
   val SCALA_VER = "2.8.1"
 
   //import ProjectInfo._
-  def templatePath: String = ProjectInfo.templateBasePath + "/lift_" +
-    version + "_sbt/" + templateType.dirName
+  def templatePath: String = ProjectInfo.templateBasePath + "/" + projectTemplate.path
   def path: String = ProjectInfo.projectBasePath + "/" + name
   /**
    * contains database account information.
@@ -166,10 +165,11 @@ case class ProjectInfo (name: String, templateType: TemplateType.Value, version:
   //def propsPath = path + "/src/main/resources/default.props"
   def propsPath = path + "/src/main/resources/props/production.default.props"
 
+  //TODO hard coded
   def warPath = path + ("/target/scala_%s/lift-sbt-template_%s-0.1.war"
                         .format(SCALA_VER, SCALA_VER))
 
-  def sbtLogPath = path + "sbt.log"
+  def sbtLogPath = path + "-sbt.log"
 
   val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
 }
@@ -180,7 +180,8 @@ object ProjectInfo {
   val projectBasePath = basePath + "/userprojects"
 
   def apply(project: Project): ProjectInfo = {
-    this(project.name, project.templateType.is, "2.2")
+    //TODO This may throw an exception...
+    this(project.name, project.template.obj.get)
   }
 }
 

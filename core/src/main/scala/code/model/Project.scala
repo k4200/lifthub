@@ -177,10 +177,21 @@ with UserEditableKeyedMapper[Long, Project]
     override def validations = valUnique(S.??("unique.project.name")) _ :: super.validations
   }
 
+  //TODO Remove this and add relationship to ProjectTemplate.
   object templateType extends MappedEnum[Project, TemplateType.type](this, TemplateType) {
     override def dbColumnName = "lift_template_type"
   }
+  object template extends MappedLongForeignKey(this, ProjectTemplate) {
+    //TODO should be done automatically.
+    override def validSelectValues = Full(
+      (0L, "Not Selected") ::
+      ProjectTemplate.findAll().map {
+	x => (x.id.is, x.name.is)
+      }
+    )
+  }
 
+  //TODO Move to ProjectTemplate
   object liftVersion extends MappedString(this, 10) {
     override def dbColumnName = "lift_version"
     override def defaultValue = "2.2" 

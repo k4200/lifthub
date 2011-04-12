@@ -80,6 +80,7 @@ object ProjectHelperSpec extends Specification {
   // -------------
 
   "ProjectInfo"should {
+    doBefore { addRecords() }
     val pi = ProjectInfo("foo", TemplateType.Mvc, "2.2")
     "be instanciated" in {
       pi.name mustEqual "foo"
@@ -100,6 +101,23 @@ object ProjectHelperSpec extends Specification {
       project.templateType.set(TemplateType.Xhtml)
       val pi2 = ProjectInfo(project)
       pi2.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_xhtml"
+    }
+
+    def addRecords() = {
+      val boot = new Boot
+      boot.boot
+
+      (for {
+        _ <- tryo{DB.runUpdate("truncate table projecttemplates", Nil)} ?~ "truncte failed."
+        _ <- tryo{DB.runUpdate("insert into projecttemplates (name,path,lift_version)values('Lift 2.2 Basic', 'path/to/template', '2.2')", Nil)} ?~ "insert1 failed."
+      } yield {
+        println("addRecords succeeded.")
+      }) match {
+        case ok: Full[_] => ok
+        case ng => {
+          println(ng)
+        }
+      }
     }
   }
 
