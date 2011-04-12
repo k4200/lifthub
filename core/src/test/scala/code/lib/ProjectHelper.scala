@@ -3,13 +3,21 @@ package lib {
 
 import org.specs._
 
+import net.liftweb.common._
+import net.liftweb.mapper._
+import net.liftweb.util.Helpers._
+
+import akka.actor.Actor
+import akka.actor.Actor._
+
 import net.lifthub.model.Project
 import net.lifthub.model.UserDatabase
-//import net.lifthub.model.DbType
+import net.lifthub.model.ProjectTemplate
+
+import bootstrap.liftweb.Boot
 
 
 object ProjectHelperSpec extends Specification {
-  val pi = ProjectInfo("foo", TemplateType.Mvc, "2.2")
   import net.lifthub.model.User
   val user = new User
   user.email.set("kashima@shibuya.scala-users.org")
@@ -24,13 +32,6 @@ object ProjectHelperSpec extends Specification {
 // KtNhHcs=
 // ---- END SSH2 PUBLIC KEY ----
 // """)
-
-  "TemplateType" should {
-    "contain correct dirName" in {
-      TemplateType.Basic.dirName mustEqual "lift_basic"
-      TemplateType.Mvc.dirName mustEqual "lift_mvc"
-    }
-  }
 
   // -------------
   "ServerInfo" should {
@@ -80,14 +81,16 @@ object ProjectHelperSpec extends Specification {
   // -------------
 
   "ProjectInfo"should {
-    doBefore { addRecords() }
-    val pi = ProjectInfo("foo", TemplateType.Mvc, "2.2")
+    doBefore { Initializer.addRecords() }
+    val pt = ProjectTemplate.find(By(ProjectTemplate.id, 1)).get
+    val pi = ProjectInfo("foo", pt)
     "be instanciated" in {
       pi.name mustEqual "foo"
-      pi.templateType mustBe TemplateType.Mvc
+      //TODO
+      //pi.templateType mustBe TemplateType.Mvc
     }
     "contain correct paths" in {
-      pi.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_mvc"
+      pi.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_basic"
       pi.path mustEqual "/home/lifthub/userprojects/foo"
       pi.gitRepoRemote mustEqual "gitosis@lifthub.net:foo.git"
 
@@ -103,22 +106,6 @@ object ProjectHelperSpec extends Specification {
       pi2.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_xhtml"
     }
 
-    def addRecords() = {
-      val boot = new Boot
-      boot.boot
-
-      (for {
-        _ <- tryo{DB.runUpdate("truncate table projecttemplates", Nil)} ?~ "truncte failed."
-        _ <- tryo{DB.runUpdate("insert into projecttemplates (name,path,lift_version)values('Lift 2.2 Basic', 'path/to/template', '2.2')", Nil)} ?~ "insert1 failed."
-      } yield {
-        println("addRecords succeeded.")
-      }) match {
-        case ok: Full[_] => ok
-        case ng => {
-          println(ng)
-        }
-      }
-    }
   }
 
   "ProjectInfo object" should {
@@ -169,10 +156,18 @@ db.password=pass"""
   }
   // -------------
   "GitosisHelper" should {
+    doBefore { Initializer.addRecords() }
+    val pt = ProjectTemplate.find(By(ProjectTemplate.id, 1)).get
+    val pi = ProjectInfo("foo", pt)
+
+    val synchronizer = new GitosisOperationsSynchronizer
+    //TODO now 'conf' is in GitosisOperationsSynchronizer.
     "provide the conf file." in {
-      GitosisHelper.conf.getAbsolutePath mustEqual "/home/lifthub/gitosis-admin/gitosis.conf"
-      GitosisHelper.conf.getRelativePath mustEqual "gitosis.conf"
-      GitosisHelper.conf.exists mustBe true
+      val conf = synchronizer.conf
+
+      conf.getAbsolutePath mustEqual "/home/lifthub/gitosis-admin/gitosis.conf"
+      conf.getRelativePath mustEqual "gitosis.conf"
+      conf.exists mustBe true
     }
     "provide a key file of the user" in {
       GitosisHelper.keyFile(user).relativePath mustEqual
@@ -181,14 +176,14 @@ db.password=pass"""
 	"/home/lifthub/gitosis-admin/keydir/kashima@shibuya.scala-users.org.pub"
     }
     "generate an entry string" in {
-      GitosisHelper.generateConfEntryString(pi, user) mustEqual
+      synchronizer.generateConfEntryString(pi, user) mustEqual
 	"""[group foo]
 members = lifthub@localhost.localdomain kashima@shibuya.scala-users.org
 writable = foo"""
     }
     "write entry to the conf file." in {
-      val before = GitosisHelper.conf.length
-      GitosisHelper.addEntry2Conf(pi, user)
+      val before = synchronizer.conf.length
+      synchronizer.addEntry2Conf(pi, user)
       //val after = GitosisHelper.conf.length
       val after = 1000
       before must_!= after
@@ -213,6 +208,26 @@ writable = foo"""
 //       GitosisHelper.removeEntryFromConf(pi)
 //     }
   }
+
+  object Initializer {
+    def addRecords() = {
+      val boot = new Boot
+      boot.boot
+
+      (for {
+        _ <- tryo{DB.runUpdate("truncate table projecttemplates", Nil)} ?~ "truncte failed."
+        _ <- tryo{DB.runUpdate("insert into projecttemplates (name,path,lift_version)values('Lift 2.2 Basic', 'lift_2.2_sbt/lift_basic', '2.2')", Nil)} ?~ "insert1 failed."
+      } yield {
+        println("addRecords succeeded.")
+      }) match {
+        case ok: Full[_] => ok
+        case ng => {
+          println(ng)
+        }
+      }
+    }
+  }
+
 
 }
 
