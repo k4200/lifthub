@@ -53,7 +53,9 @@ class ProjectOperations {
   def updatews(project: Project): JsCmd = {
     ProjectHelper.updateWorkspace(project) match {
       case Full(x) => S.notice(x.toString)
-      case Failure(x, _, _) => S.error(x.toString)
+      case Failure(msg, e, _) =>
+	S.error(msg)
+	e.map(println)
       case Empty => S.error("Update workspace failed.")
     }
     Noop

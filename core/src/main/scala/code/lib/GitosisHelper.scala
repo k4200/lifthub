@@ -24,6 +24,7 @@ case class AddEntry2Conf(projectInfo: ProjectInfo, user: User) extends GitosisEv
 case class RemoveEntryFromConf(projectInfo: ProjectInfo) extends GitosisEvent
 case object GitAddConf extends GitosisEvent
 case class GitAddSshKey(user: User) extends GitosisEvent
+case class GitRmSshKey(user: User) extends GitosisEvent
 case class GitCommitAndPush(message: String, dryRun: Boolean) extends GitosisEvent
 
 /**
@@ -36,6 +37,7 @@ private class GitosisOperationsSynchronizer extends Actor {
     case RemoveEntryFromConf(pi) => removeEntryFromConf(pi)
     case GitAddConf => gitAddConf
     case GitAddSshKey(u) => gitAddSshKey(u)
+    case GitRmSshKey(u) => gitRmSshKey(u)
     case GitCommitAndPush(message, dryRun) => commitAndPush(message, dryRun)
   }
 
@@ -135,6 +137,15 @@ private class GitosisOperationsSynchronizer extends Actor {
     self.reply({
     val git = new Git(gitosisRepo)
     val dirCache = git.add().addFilepattern(keyFile(user).relativePath).call()
+    //val dirCache = git.add().addFilepattern("fail").call()
+    true
+    })
+  }
+
+  def gitRmSshKey(user: User) = {
+    self.reply({
+    val git = new Git(gitosisRepo)
+    val dirCache = git.rm().addFilepattern(keyFile(user).relativePath).call()
     //val dirCache = git.add().addFilepattern("fail").call()
     true
     })
@@ -245,6 +256,10 @@ object GitosisHelper {
 
   def gitAddSshKey(user: User): Boolean = {
     replyHandler(synchronizer !! GitAddSshKey(user))
+  }
+
+  def gitRmSshKey(user: User): Boolean = {
+    replyHandler(synchronizer !! GitRmSshKey(user))
   }
 
   /**
