@@ -23,21 +23,6 @@ import storage.file.{FileRepository, FileRepositoryBuilder}
 import transport.{Transport, RefSpec, RemoteConfig, URIish}
 
 
-/**
- *
- */
-object TemplateType extends Enumeration {
-  val Basic = TemplateTypeVal("Basic")
-  val Blank = TemplateTypeVal("Blank")
-  val Mvc   = TemplateTypeVal("MVC")
-  val Xhtml = TemplateTypeVal("XHTML")
-  case class TemplateTypeVal(name: String) extends Val(name) {
-    val dirName = "lift_" + name.toLowerCase
-  }
-  implicit def valueToTemplateTypeValue(v: Value): TemplateTypeVal
-    = v.asInstanceOf[TemplateTypeVal]
-}
-
 case class ServerInfo(projectName: String, port: Int, version: String) {
   //Paths
   val JAIL_SETUP_PROG = "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
@@ -240,6 +225,8 @@ object SbtHelper {
 
     val executor = new DefaultExecutor
     executor.setWorkingDirectory(pi.path)
+    // Note that this 'sbt' is not in the one included in the project
+    // but /home/lifthub/bin/sbt
     val cmdLine = new CommandLine("sbt")
     cmdLine.addArgument(command)
     val streamHandler = new PumpStreamHandler(
@@ -287,7 +274,7 @@ object ProjectHelper {
 
   /**
    * Adds the user to gitosis and copy the template.
-   * The changes need to be commited by using
+   * The changes need to be committed by using
    * <code>commitAndPushProject</code>.
    */
   def createProject(projectInfo: ProjectInfo, user: User) = {
@@ -321,8 +308,8 @@ object ProjectHelper {
   def copyTemplate(projectInfo: ProjectInfo): Boolean = {
     try {
       CommonsFileUtils.copyDirectory(projectInfo.templatePath, projectInfo.path)
-      val sbt = projectInfo.path + "/sbt"
-      sbt.setExecutable(true)
+//       val sbt = projectInfo.path + "/sbt"
+//       sbt.setExecutable(true)
       true
     } catch {
       case e: java.io.IOException => false

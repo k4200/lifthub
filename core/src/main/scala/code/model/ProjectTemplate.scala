@@ -30,9 +30,15 @@ with AdminEditableKeyedMapper[Long, ProjectTemplate]
     override def validations = valUnique(S.??("unique.projecttemplate.name")) _ :: super.validations
   }
 
+  /**
+   * Relative path to the project template.
+   */
   object path extends MappedString(this, 40) {
   }
 
+  /**
+   * Not really used at this moment, but maybe useful.
+   */
   object liftVersion extends MappedString(this, 10) {
     override def dbColumnName = "lift_version"
   }

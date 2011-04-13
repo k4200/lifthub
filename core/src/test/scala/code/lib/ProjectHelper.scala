@@ -89,10 +89,9 @@ object ProjectHelperSpec extends Specification {
     }
     "be instanciated out of Project" in {
       val project = Project.create
-      project.liftVersion.set("2.2")
-      project.templateType.set(TemplateType.Xhtml)
+      project.template(pt)
       val pi2 = ProjectInfo(project)
-      pi2.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_xhtml"
+      pi2.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_basic"
     }
 
   }
