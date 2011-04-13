@@ -23,16 +23,6 @@ object ProjectHelperSpec extends Specification {
   user.email.set("kashima@shibuya.scala-users.org")
   user.sshKey.set("ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAIEAjz+vWAw0gf7PGUBkVO12HEuDzId08c/uv2kGQmhA7GRZ+Aw8SMhVAua3Vy7Ob21AhWkPfE/1/oiVTWTZSUhuoGtcxcP+0lL13GB5DHABr6eWH9CE11qxBAYs/wk+c7xMMj3Igh2MZvTydVr1useq4f1npiJ8+bzCMJiSKtNhHcs= kashima@shibuya.scala-users.org")
 
-//TODO write tests for User.
-//   user.sshKey.set("""---- BEGIN SSH2 PUBLIC KEY ----
-// Comment: "kashima@shibuya.scala-users.org"
-// AAAAB3NzaC1yc2EAAAABJQAAAIEAjz+vWAw0gf7PGUBkVO12HEuDzId08c/uv2kG
-// QmhA7GRZ+Aw8SMhVAua3Vy7Ob21AhWkPfE/1/oiVTWTZSUhuoGtcxcP+0lL13GB5
-// DHABr6eWH9CE11qxBAYs/wk+c7xMMj3Igh2MZvTydVr1useq4f1npiJ8+bzCMJiS
-// KtNhHcs=
-// ---- END SSH2 PUBLIC KEY ----
-// """)
-
   // -------------
   "ServerInfo" should {
     val si = ServerInfo("foo", 9000, "6")
@@ -86,8 +76,7 @@ object ProjectHelperSpec extends Specification {
     val pi = ProjectInfo("foo", pt)
     "be instanciated" in {
       pi.name mustEqual "foo"
-      //TODO
-      //pi.templateType mustBe TemplateType.Mvc
+      pi.projectTemplate.getSingleton mustBe ProjectTemplate
     }
     "contain correct paths" in {
       pi.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_basic"
@@ -160,8 +149,8 @@ db.password=pass"""
     val pt = ProjectTemplate.find(By(ProjectTemplate.id, 1)).get
     val pi = ProjectInfo("foo", pt)
 
+    // now 'conf' is in GitosisOperationsSynchronizer.
     val synchronizer = new GitosisOperationsSynchronizer
-    //TODO now 'conf' is in GitosisOperationsSynchronizer.
     "provide the conf file." in {
       val conf = synchronizer.conf
 

@@ -21,6 +21,8 @@ object ProjectSpec extends Specification {
       Project.max(Project.port, By(Project.name, "foo")) mustEqual 9001
     }
 
+    //TODO Write more test cases.
+
     def addRecords() = {
       val boot = new Boot
       boot.boot

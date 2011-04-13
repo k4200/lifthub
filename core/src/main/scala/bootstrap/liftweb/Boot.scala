@@ -52,6 +52,7 @@ class Boot {
     Schemifier.schemify(true, Schemifier.infoF _, User)
     Schemifier.schemify(true, Schemifier.infoF _, Project)
     Schemifier.schemify(true, Schemifier.infoF _, UserDatabase)
+    Schemifier.schemify(true, Schemifier.infoF _, ProjectTemplate)
 
     // where to search snippet
     LiftRules.addToPackages("net.lifthub")
@@ -59,16 +60,23 @@ class Boot {
     val loggedIn = If(() => User.loggedIn_?,
                       () => RedirectResponse("/user_mgt/login"))
 
+    val superUser_? = If(() => User.superUser_?,
+                         () => RedirectResponse("/user_mgt/login"))
+
     // Build SiteMap
     def sitemap = SiteMap(
       List(
         Menu.i("Home") / "index" >> User.AddUserMenusAfter,
+        Menu.i("Project Template") / "project_templates"
+          submenus ProjectTemplate.menus 
+          rule (superUser_?),
         Menu.i("Project") / "project" submenus (
           Project.menus
           ::: List(Menu.i("Operations") / "projects" / "operate")
         ) rule (loggedIn),
         Menu.i("Database") / "database" submenus UserDatabase.menus 
-          rule (loggedIn)
+          rule (loggedIn),
+        Menu.i("Log") / "log"  rule (loggedIn)
       ): _* )
 
       // more complex because this menu allows anything in the

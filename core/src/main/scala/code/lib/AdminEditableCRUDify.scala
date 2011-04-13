@@ -12,14 +12,9 @@ import proto.{ProtoUser => GenProtoUser}
 
 
 trait AdminEditableCRUDify [KeyType,
-                            CrudType <: UserEditableKeyedMapper[KeyType, CrudType]]
+                            CrudType <: AdminEditableKeyedMapper[KeyType, CrudType]]
 extends MegaCRUDify [KeyType, CrudType] {
   self: CrudType with KeyedMetaMapper[KeyType, CrudType] =>
-//   val superUser_? = If(() => self.userObject.currentUser match {
-//                                case Full(user) => user.superUser_?;
-//                                case Full(user) => true;
-//                                case _ => false} ,
-//                        () => RedirectResponse("/user_mgt/login"));
   val superUser_? = If(() => self.userObject.superUser_? ,
                        () => RedirectResponse("/user_mgt/login"));
 
@@ -29,6 +24,15 @@ extends MegaCRUDify [KeyType, CrudType] {
   override def editMenuLocParams: List[Loc.AnyLocParam] = List(superUser_?);
   override def deleteMenuLocParams: List[Loc.AnyLocParam] = List(superUser_?);
   //override def deleteMenuLoc: Box[Menu] = Empty;
+
+}
+
+
+trait AdminEditableKeyedMapper[KeyType, OwnerType <: KeyedMapper[KeyType, OwnerType]]
+extends KeyedMapper[KeyType, OwnerType] {
+  self: OwnerType =>
+
+  val userObject: GenProtoUser
 
 }
 

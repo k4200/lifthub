@@ -59,6 +59,10 @@ with AggregateFunctions[Project]
     }
   }
 
+  /**
+   * Checks if the user has registered an SSH key.
+   * 'project' isn't used, but necessary to be used by validation.
+   */
   private def checkSshKey(project: Project): List[FieldError] = {
     User.currentUser match {
       case Full(user) =>
@@ -94,7 +98,7 @@ with AggregateFunctions[Project]
           dbInfo.userId(user.id)
           dbInfo.save
           project.database(dbInfo)
-          project.userId(user.id)
+          project.userId(user.id) //TODO should be set automatically.
 	}
       case _ =>
         List(FieldError(Project.name,
@@ -178,9 +182,10 @@ with UserEditableKeyedMapper[Long, Project]
   }
 
   //TODO Remove this and add relationship to ProjectTemplate.
-  object templateType extends MappedEnum[Project, TemplateType.type](this, TemplateType) {
-    override def dbColumnName = "lift_template_type"
-  }
+//   object templateType extends MappedEnum[Project, TemplateType.type](this, TemplateType) {
+//     override def dbColumnName = "lift_template_type"
+//   }
+
   object template extends MappedLongForeignKey(this, ProjectTemplate) {
     //TODO should be done automatically.
     override def validSelectValues = Full(
@@ -192,11 +197,11 @@ with UserEditableKeyedMapper[Long, Project]
   }
 
   //TODO Move to ProjectTemplate
-  object liftVersion extends MappedString(this, 10) {
-    override def dbColumnName = "lift_version"
-    override def defaultValue = "2.2" 
-    override def dbDisplay_? = false //TODO for now only 2.2 is available.
-  }
+//   object liftVersion extends MappedString(this, 10) {
+//     override def dbColumnName = "lift_version"
+//     override def defaultValue = "2.2" 
+//     override def dbDisplay_? = false //TODO for now only 2.2 is available.
+//   }
 
   object database extends MappedLongForeignKey(this, UserDatabase) {
     //TODO should be done automatically.

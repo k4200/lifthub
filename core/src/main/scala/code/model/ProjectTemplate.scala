@@ -15,13 +15,13 @@ object ProjectTemplate extends ProjectTemplate
 with LongKeyedMetaMapper[ProjectTemplate]
 with AdminEditableCRUDify[Long, ProjectTemplate]
 {
-
+  override def dbTableName = "project_templates"; // define the DB table name
 }
 
 
 class ProjectTemplate extends LongKeyedMapper[ProjectTemplate]
 with IdPK
-with UserEditableKeyedMapper[Long, ProjectTemplate]
+with AdminEditableKeyedMapper[Long, ProjectTemplate]
 {
   def getSingleton = ProjectTemplate
   override val userObject = User
