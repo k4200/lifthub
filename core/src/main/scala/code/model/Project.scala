@@ -51,8 +51,8 @@ with AggregateFunctions[Project]
         if (count(By(Project.userId, user.id)) >= user.maxNumProjects) {
           List(FieldError(Project.name, Text("You can't create more than %d project.".format(user.maxNumProjects))))
         } else {
-	  Nil
-	}
+          Nil
+        }
       case _ =>
         List(FieldError(Project.name,
                         Text(S.??("validation.general.require.login"))))
@@ -70,7 +70,7 @@ with AggregateFunctions[Project]
           List(FieldError(Project.name, Text("You need to register your SSH key first.")))
         } else {
           Nil
-	}
+        }
       case _ =>
         List(FieldError(Project.name,
                         Text(S.??("validation.general.require.login"))))
@@ -93,13 +93,13 @@ with AggregateFunctions[Project]
   private def createDatabaseIfNone(project: Project): Unit = {
     User.currentUser match {
       case Full(user) =>
-	if(project.database == 0) {
+        if(project.database == 0) {
           val dbInfo = UserDatabase.createFromProject(project)
           dbInfo.userId(user.id)
           dbInfo.save
           project.database(dbInfo)
           project.userId(user.id) //TODO should be set automatically.
-	}
+        }
       case _ =>
         List(FieldError(Project.name,
                         Text(S.??("validation.general.require.login"))))
@@ -130,11 +130,18 @@ with AggregateFunctions[Project]
   override def afterDelete = List(project => {
     println("afterDelete")
 
-    // Drop the database.
+    // Drop the database unless there are other projects
+    // that use the same database,
     for(database <- project.database.obj)
     yield {
-      database.dropDatabase
-      database.delete_!
+      Project.find(By(Project.database, database.id)) match {
+        case Empty =>
+          if(!"test".equals(System.getProperty("run.mode"))) {  
+            database.dropDatabase
+	  }
+          database.delete_!
+        case _ => println("This database is used by other projects.")
+      }
     }
 
     // Remove the entry from gitosis.
@@ -185,7 +192,7 @@ with UserEditableKeyedMapper[Long, Project]
     override def dbNotNull_? = true
     override def validSelectValues = Full(
       ProjectTemplate.findAll().map {
-	x => (x.id.is, x.name.is)
+        x => (x.id.is, x.name.is)
       }
     )
   }
@@ -195,11 +202,11 @@ with UserEditableKeyedMapper[Long, Project]
     override def validSelectValues = Full(
       (0L, "Create a new one (recommended)") ::
       (User.currentUser match {
-	case Full(user) =>
-	  UserDatabase.findAll(By(UserDatabase.userId, user.id)).map {
-	    x => (x.id.is, x.databaseType.is + ":" + x.name.is)
+        case Full(user) =>
+          UserDatabase.findAll(By(UserDatabase.userId, user.id)).map {
+            x => (x.id.is, x.databaseType.is + ":" + x.name.is)
          }
-	case _ => Nil
+        case _ => Nil
       })
     )
   }

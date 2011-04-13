@@ -114,5 +114,17 @@ class Boot {
     //KK
     LiftRules.ajaxPostTimeout = 60000
     System.setProperty("mail.smtp.host", "localhost")
+
+    // Add a query logger
+//     val logger = Logger(classOf[Boot])
+//     DB.addLogFunc {
+//       case (log, duration) => {
+//       logger.debug("Total query time : %d ms".format(duration))
+//       log.allEntries.foreach {
+// 	   case DBLogEntry(stmt,duration) =>
+// 	     logger.debug("  %s in %d ms".format(stmt, duration))
+//         }
+//       }
+//     }
   }
 }

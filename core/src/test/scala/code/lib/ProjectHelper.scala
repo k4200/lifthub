@@ -27,8 +27,8 @@ object ProjectHelperSpec extends Specification {
   "ServerInfo" should {
     val si = ServerInfo("foo", 9000, "6")
     "contain correct paths." in {
-      si.deployDirPath mustEqual "/home/lifthubuser/servers/jetty-6/userwebapps/foo"
-      si.confPath mustEqual "/home/lifthubuser/servers/jetty-6/etc/lifthub/foo.xml"
+      si.deployDirPath mustEqual "/home/lifthubuser/chroot/foo/home/lifthubuser/servers/jetty-6/userwebapps/foo"
+      si.confPath mustEqual "/home/lifthubuser/chroot/foo/home/lifthubuser/servers/jetty-6/etc/lifthub/foo.xml"
     }
 
     "generate a conf string" in {
@@ -203,8 +203,8 @@ writable = foo"""
       boot.boot
 
       (for {
-        _ <- tryo{DB.runUpdate("truncate table projecttemplates", Nil)} ?~ "truncte failed."
-        _ <- tryo{DB.runUpdate("insert into projecttemplates (name,path,lift_version)values('Lift 2.2 Basic', 'lift_2.2_sbt/lift_basic', '2.2')", Nil)} ?~ "insert1 failed."
+        _ <- tryo{DB.runUpdate("truncate table project_templates", Nil)} ?~ "truncte failed."
+        _ <- tryo{DB.runUpdate("insert into project_templates (name,path,lift_version)values('Lift 2.2 Basic', 'lift_2.2_sbt/lift_basic', '2.2')", Nil)} ?~ "insert1 failed."
       } yield {
         println("addRecords succeeded.")
       }) match {
