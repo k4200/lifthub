@@ -45,6 +45,12 @@ with AggregateFunctions[Project]
     createDatabaseIfNone
   )
 
+  override def beforeDelete = List(project => {
+    import net.lifthub.client._
+    println("Project.beforeDelete")
+    ServerManagerClient.stopServer(project)
+  })
+
   private def checkNumberOfProjects(project: Project): List[FieldError] = {
     User.currentUser match {
       case Full(user) =>
