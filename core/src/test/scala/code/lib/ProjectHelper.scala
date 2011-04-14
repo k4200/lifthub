@@ -18,6 +18,7 @@ import bootstrap.liftweb.Boot
 
 
 object ProjectHelperSpec extends Specification {
+  Initializer.initConn()
   import net.lifthub.model.User
   val user = new User
   user.email.set("kashima@shibuya.scala-users.org")
@@ -83,7 +84,7 @@ object ProjectHelperSpec extends Specification {
       pi.path mustEqual "/home/lifthub/userprojects/foo"
       pi.gitRepoRemote mustEqual "gitosis@lifthub.net:foo.git"
 
-      pi.propsPath mustEqual "/home/lifthub/userprojects/foo/src/main/resources/default.props"
+      pi.propsPath mustEqual "/home/lifthub/userprojects/foo/src/main/resources/props/production.props"
       pi.warPath mustEqual "/home/lifthub/userprojects/foo/target/scala_2.8.1/lift-sbt-template_2.8.1-0.1.war"
 
     }
@@ -149,7 +150,9 @@ db.password=pass"""
     val pi = ProjectInfo("foo", pt)
 
     // now 'conf' is in GitosisOperationsSynchronizer.
-    val synchronizer = new GitosisOperationsSynchronizer
+import akka.actor.Actor
+import akka.actor.Actor._
+    val synchronizer = (actorOf[GitosisOperationsSynchronizer]).asInstanceOf[GitosisOperationsSynchronizer]
     "provide the conf file." in {
       val conf = synchronizer.conf
 
@@ -198,15 +201,17 @@ writable = foo"""
   }
 
   object Initializer {
-    def addRecords() = {
+    def initConn() = {
       val boot = new Boot
       boot.boot
+    }
+    def addRecords() = {
 
       (for {
         _ <- tryo{DB.runUpdate("truncate table project_templates", Nil)} ?~ "truncte failed."
-        _ <- tryo{DB.runUpdate("insert into project_templates (name,path,lift_version)values('Lift 2.2 Basic', 'lift_2.2_sbt/lift_basic', '2.2')", Nil)} ?~ "insert1 failed."
+        _ <- tryo{DB.runUpdate("insert into project_templates (id, name,path,lift_version)values(1, 'Lift 2.2 Basic', 'lift_2.2_sbt/lift_basic', '2.2')", Nil)} ?~ "insert1 failed."
       } yield {
-        println("addRecords succeeded.")
+        println("ProjectHelper.Initializer.addRecords succeeded.")
       }) match {
         case ok: Full[_] => ok
         case ng => {
