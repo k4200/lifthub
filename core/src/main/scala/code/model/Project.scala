@@ -79,7 +79,11 @@ with AggregateFunctions[Project]
 
   private def checkSpecialNames(project: Project): List[FieldError] = {
     //TODO Temporary
-    if (project.name == "www") {
+    val ngNames = List("www", "test", "mysql", "lifthub", "lifthub_test",
+                       "information_schema", "testtest")
+    println(ngNames)
+    println(project.name.is)
+    if (ngNames.contains(project.name.is)) {
       List(FieldError(Project.name, Text(project.name + " can't be used.")))
     } else {
       Nil
