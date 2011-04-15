@@ -144,61 +144,6 @@ db.password=pass"""
     }
   }
   // -------------
-  "GitosisHelper" should {
-    doBefore { Initializer.addRecords() }
-    val pt = ProjectTemplate.find(By(ProjectTemplate.id, 1)).get
-    val pi = ProjectInfo("foo", pt)
-
-    // now 'conf' is in GitosisOperationsSynchronizer.
-import akka.actor.Actor
-import akka.actor.Actor._
-    val synchronizer = (actorOf[GitosisOperationsSynchronizer]).asInstanceOf[GitosisOperationsSynchronizer]
-    "provide the conf file." in {
-      val conf = synchronizer.conf
-
-      conf.getAbsolutePath mustEqual "/home/lifthub/gitosis-admin/gitosis.conf"
-      conf.getRelativePath mustEqual "gitosis.conf"
-      conf.exists mustBe true
-    }
-    "provide a key file of the user" in {
-      GitosisHelper.keyFile(user).relativePath mustEqual
-	"keydir/kashima@shibuya.scala-users.org.pub"
-      GitosisHelper.keyFile(user).getAbsolutePath mustEqual
-	"/home/lifthub/gitosis-admin/keydir/kashima@shibuya.scala-users.org.pub"
-    }
-    "generate an entry string" in {
-      synchronizer.generateConfEntryString(pi, user) mustEqual
-	"""[group foo]
-members = lifthub@localhost.localdomain kashima@shibuya.scala-users.org
-writable = foo"""
-    }
-    "write entry to the conf file." in {
-      val before = synchronizer.conf.length
-      synchronizer.addEntry2Conf(pi, user)
-      //val after = GitosisHelper.conf.length
-      val after = 1000
-      before must_!= after
-    }
-    "mark the conf file to be committed" in {
-      //GitosisHelper.gitAddConf mustBe true
-      true mustBe true
-    }
-    "write a user's key to a file" in {
-      GitosisHelper.createSshKey(user) mustBe true
-    }    
-    "add the user's key to git" in {
-      //GitosisHelper.gitAddSshKey(user) mustBe true
-      true mustBe true
-    }
-    "commit user's key and the conf file and push them" in {
-      //GitosisHelper.commitAndPush("Added a user: " + user.email, true) mustBe true
-      //GitosisHelper.commitAndPush("Added a user: " + user.email) mustBe true
-      true mustBe true
-    }
-//     "remove an entry from the conf file" in {
-//       GitosisHelper.removeEntryFromConf(pi)
-//     }
-  }
 
   object Initializer {
     def initConn() = {
