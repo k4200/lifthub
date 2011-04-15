@@ -88,6 +88,7 @@ class ProjectOperations {
 
   def deploy(project: Project): JsCmd = {
     execute(project, "deploy", SbtHelper.deploy)
+    SetHtml("log", Text(""))
   }
 
   def start(project: Project): JsCmd = {
