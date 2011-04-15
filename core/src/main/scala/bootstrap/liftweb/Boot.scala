@@ -53,6 +53,7 @@ class Boot {
     Schemifier.schemify(true, Schemifier.infoF _, Project)
     Schemifier.schemify(true, Schemifier.infoF _, UserDatabase)
     Schemifier.schemify(true, Schemifier.infoF _, ProjectTemplate)
+    Schemifier.schemify(true, Schemifier.infoF _, UserConfig)
 
     // where to search snippet
     LiftRules.addToPackages("net.lifthub")

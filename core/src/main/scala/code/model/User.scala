@@ -181,6 +181,7 @@ object User extends User with MetaMegaProtoUser[User] {
 class User extends MegaProtoUser[User] {
   //TODO Move
   val MAX_NUM_PROJECTS = 1
+  val CONF_MAX_NUM_PROJECTS = "limit.maxprojects"
 
   def getSingleton = User // what's the "meta" server
 
@@ -204,8 +205,13 @@ class User extends MegaProtoUser[User] {
    * 
    */
   def maxNumProjects: Int = {
-    if(this.superUser_?) 10
-    else MAX_NUM_PROJECTS
+    tryo {
+      val s = UserConfig.getValue(this, CONF_MAX_NUM_PROJECTS).get
+      Integer.parseInt(s)
+    } openOr {
+      if(this.superUser_?) 10
+      else MAX_NUM_PROJECTS
+    }
   }
 }
 

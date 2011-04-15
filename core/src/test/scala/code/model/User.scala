@@ -17,7 +17,7 @@ object UserSpec extends Specification {
   "User" should { doBefore { addRecords() }
     "register a new ssh key." in {
       //init
-      val user = User.find(By(User.id, 1)).get
+      val user = User.find(By(User.id, 10)).get
       val keyFile = GitosisHelper.keyFile(user)
       keyFile.delete
 
@@ -37,6 +37,16 @@ object UserSpec extends Specification {
       newKey2 mustEqual "new key"
     }
 
+    "return maxNumProjects" in {
+      val user1 = User.find(By(User.id, 10)).get
+      val user2 = User.find(By(User.id, 11)).get
+      val user3 = User.find(By(User.id, 12)).get
+
+      user1.maxNumProjects mustEqual 3
+      user2.maxNumProjects mustEqual 1
+      user3.maxNumProjects mustEqual 1
+    }
+
     def getKeyString(keyFile: java.io.File): String = {
       if (keyFile.exists) {
         Source.fromFile(keyFile, "UTF-8").mkString
@@ -50,9 +60,13 @@ object UserSpec extends Specification {
       boot.boot
 
       (for {
+        _ <- tryo{DB.runUpdate("truncate table user_config", Nil)} ?~ "truncte user_config failed."
         _ <- tryo{DB.runUpdate("truncate table users", Nil)} ?~ "truncte failed."
-        _ <- tryo{DB.runUpdate("insert into users (firstname,lastname,email,ssh_key)values('John','Doe','john@example.com','dummy-key')", Nil)} ?~ "insert1 failed."
-        _ <- tryo{DB.runUpdate("insert into users (firstname,lastname,email)values('Taro','Yamada','taro@example.com')", Nil)} ?~ "insert2 failed."
+        _ <- tryo{DB.runUpdate("insert into users (id,firstname,lastname,email,ssh_key)values(10, 'John','Doe','john@example.com','dummy-key')", Nil)} ?~ "insert1 failed."
+        _ <- tryo{DB.runUpdate("insert into users (id,firstname,lastname,email)values(11, 'Taro','Yamada','taro@example.com')", Nil)} ?~ "insert2 failed."
+        _ <- tryo{DB.runUpdate("insert into users (id,firstname,lastname,email)values(12, 'Hanako','Yamada','hanako@example.com')", Nil)} ?~ "insert3 failed."
+        _ <- tryo{DB.runUpdate("insert into user_config (name,value,user_c)values('limit.maxprojects','3',10)", Nil)} ?~ "insert user_config1 failed."
+        _ <- tryo{DB.runUpdate("insert into user_config (name,value,user_c)values('limit.maxprojects','a',11)", Nil)} ?~ "insert user_config1 failed."
       } yield {
         println("addRecords succeeded.")
       }) match {
