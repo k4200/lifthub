@@ -86,7 +86,7 @@ with AggregateFunctions[Project]
   private def checkSpecialNames(project: Project): List[FieldError] = {
     //TODO Temporary
     val ngNames = List("www", "test", "mysql", "lifthub", "lifthub_test",
-                       "information_schema", "testtest")
+                       "information_schema", "basejail", "newjail")
     println(ngNames)
     println(project.name.is)
     if (ngNames.contains(project.name.is)) {
