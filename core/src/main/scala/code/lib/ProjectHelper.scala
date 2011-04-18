@@ -4,7 +4,8 @@ package lib {
 import java.io._
 
 import net.liftweb.common._
-import net.liftweb.util.Helpers._
+import net.liftweb.util._
+import Helpers._
 
 import net.lifthub.model.User
 import net.lifthub.model.Project
@@ -25,17 +26,37 @@ import transport.{Transport, RefSpec, RemoteConfig, URIish}
 
 case class ServerInfo(projectName: String, port: Int, version: String) {
   //Paths
-  val JAIL_SETUP_PROG = "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
-  val JAIL_PARENT_DIR = "/home/lifthubuser/chroot"
+  val JAIL_SETUP_PROG = Props.get("jailer.path.bin.setup") openOr
+    "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
+  //TODO should be JAILER_PARENT_DIR ?
+  val JAIL_PARENT_DIR = Props.get("jailer.path.jailroot") openOr
+    "/home/lifthubuser/chroot"
+  //TODO jetty-6
+  val JAILER_TEMPLATE_DIR = Props.get("") openOr
+    "/home/lifthubuser/servers/jetty-6/etc"
+
   val jailRootPath = JAIL_PARENT_DIR + "/" + projectName
 
-  val serverName = "jetty"
-  val basePath = "/home/lifthubuser/servers/%s-%s".format(serverName, version)
+  val JAIL_SERVER_DIR = Props.get("jail.path.serverroot") openOr
+    "/home/lifthubuser/servers"
+  val JAIL_LOG_DIR = Props.get("jail.path.log") openOr
+    "/home/lifthubuser/logs"
+  //TODO only jetty-6, not a constant
+  val JAIL_WEBAPP_DIR = Props.get("jail.path.webappdir") openOr
+    "/home/lifthubuser/servers/jetty-6/userwebapps/" + projectName
+  //TODO jetty-6
+  val JAIL_CONF_DIR = Props.get("jail.path.confdir") openOr
+    "/home/lifthubuser/servers/jetty-6/etc/lifthub"
 
-  val deployDirPath = jailRootPath + basePath + "/userwebapps/" + projectName
-  val confPath = jailRootPath + basePath + "/etc/lifthub/" + projectName + ".xml"
-  val templatePath = basePath + "/etc/jetty.xml.tmpl"
-  val logDirPath = jailRootPath + basePath + "/logs"
+  //TODO
+  val serverName = "jetty"
+  val basePath = JAIL_SERVER_DIR + "/%s-%s".format(serverName, version)
+
+  val deployDirPath = jailRootPath + JAIL_WEBAPP_DIR
+  val confPath = jailRootPath + JAIL_CONF_DIR + "/" + projectName + ".xml"
+
+  val templatePath = jailRootPath + JAILER_TEMPLATE_DIR + "/jetty.xml.tmpl"
+  val logDirPath = jailRootPath + JAIL_LOG_DIR
   val executeLogPath = logDirPath + "/" + projectName + "-execute.log"
 
   //val pidFilePath = jailRootPath + basePath + "/logs/" + projectName + ".pid"
