@@ -39,8 +39,10 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
 
   val JAIL_SERVER_DIR = Props.get("jail.path.serverroot") openOr
     "/home/lifthubuser/servers"
+  //TODO only jetty-6
+  //  "/home/lifthubuser/logs"
   val JAIL_LOG_DIR = Props.get("jail.path.log") openOr
-    "/home/lifthubuser/logs"
+    "/home/lifthubuser/servers/jetty-6/logs"
   //TODO only jetty-6, not a constant
   val JAIL_WEBAPP_DIR = Props.get("jail.path.webappdir") openOr
     "/home/lifthubuser/servers/jetty-6/userwebapps/" + projectName
