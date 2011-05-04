@@ -1,36 +1,62 @@
-#!/bin/bash
+#!/bin/sh
 
 usage() {
-  echo "$0 <create|delete> <name>"
+  echo "$0 create <name> <IP address>"
+  echo "$0 delete <name>"
 }
 
-if [ $# -ne 2 ];
-then
-  usage
-  exit 2
-fi
+
+case "$1" in
+  create)
+    if [ $# -ne 3 ];
+    then
+      usage
+      exit 2
+    fi
+    ;;
+  delete)
+    if [ $# -ne 2 ];
+    then
+      usage
+      exit 2
+    fi
+    ;;
+esac
 
 
 NAME=$2
 
-TMPL=/home/lifthubuser/jail-template
-JAIL_ROOT=/home/lifthubuser/chroot
-REPO_ROOT=/var/lib/gitosis/repositories
+JAIL_ROOT=/home/jails
+RC_CONF_JAIL=/etc/rc.conf.jail
 
 case "$1" in
   create)
-    cp -a $TMPL $JAIL_ROOT/$NAME
-    mount -t proc none $JAIL_ROOT/$NAME/proc/
+    IPADDR=$3
+
+    # network interface
+    TEST=`ifconfig | grep "$IPADDR "`
+    if [ -z "$TEST" ];
+    then
+      #ifconfig lo0 alias $IPADDR netmask 255.255.255.255
+      echo "ifconfig lo0 alias $IPADDR netmask 255.255.255.255"
+    fi
+    # jail
+    #ezjail-admin create -f lifthub $NAME $IPADDR
+
+    # write an entry for the IP address to rc.conf.jail
+    TEST=`grep "$IPADDR " $RC_CONF_JAIL`
+    if [ -z "$TEST" ];
+    then
+      N=`grep ifconfig_lo0_alias $RC_CONF_JAIL | tail -1 | sed -e 's/ifconfig_lo0_alias\([0-9]\{1,\}\).*/\1/'`
+      N=`expr $N + 1`
+      #echo "ifconfig_lo0_alias$N=\"inet $IPADDR netmask 255.255.255.255\"" >> $RC_CONF_JAIL
+      echo "ifconfig_lo0_alias$N=\"inet $IPADDR netmask 255.255.255.255\""
+    fi
+
+
     ;;
   delete)
-    umount $JAIL_ROOT/$NAME/proc
-    rm -rf $JAIL_ROOT/$NAME
-
-    # This has nothing to do with the jail environment,
-    # but it requires root or gitosis privilege to delete it,
-    # which neither the web app nor Server Manager has,
-    # so put it here for now.
-    rm -rf $REPO_ROOT/$NAME.git
+    ezjail-admin delete -w $NAME
     ;;
   *)
     usage
