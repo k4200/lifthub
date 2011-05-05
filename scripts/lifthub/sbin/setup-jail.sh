@@ -37,11 +37,11 @@ case "$1" in
     TEST=`ifconfig | grep "$IPADDR "`
     if [ -z "$TEST" ];
     then
-      #ifconfig lo0 alias $IPADDR netmask 255.255.255.255
-      echo "ifconfig lo0 alias $IPADDR netmask 255.255.255.255"
+      ifconfig lo0 alias $IPADDR netmask 255.255.255.255
+      #echo "ifconfig lo0 alias $IPADDR netmask 255.255.255.255"
     fi
     # jail
-    #ezjail-admin create -f lifthub $NAME $IPADDR
+    ezjail-admin create -f lifthub $NAME $IPADDR
 
     # write an entry for the IP address to rc.conf.jail
     TEST=`grep "$IPADDR " $RC_CONF_JAIL`
@@ -49,13 +49,16 @@ case "$1" in
     then
       N=`grep ifconfig_lo0_alias $RC_CONF_JAIL | tail -1 | sed -e 's/ifconfig_lo0_alias\([0-9]\{1,\}\).*/\1/'`
       N=`expr $N + 1`
-      #echo "ifconfig_lo0_alias$N=\"inet $IPADDR netmask 255.255.255.255\"" >> $RC_CONF_JAIL
-      echo "ifconfig_lo0_alias$N=\"inet $IPADDR netmask 255.255.255.255\""
+      echo "ifconfig_lo0_alias$N=\"inet $IPADDR netmask 255.255.255.255\"" >> $RC_CONF_JAIL
+      #echo "ifconfig_lo0_alias$N=\"inet $IPADDR netmask 255.255.255.255\""
     fi
 
+    #
+    /usr/opt/etc/rc.d/ezjail.sh start $NAME
 
     ;;
   delete)
+    ezjail-admin stop $NAME
     ezjail-admin delete -w $NAME
     ;;
   *)
