@@ -12,6 +12,7 @@ import java.util.concurrent.ThreadPoolExecutor._
 import bootstrap.liftweb.Boot
 
 import net.lifthub.common.event.gitrepo._
+import net.lifthub.common.event.gitrepo.response._
 import net.lifthub.common.ActorConfig
 import net.lifthub.lib.GitoriousHelper
 
@@ -36,12 +37,12 @@ class GitRepoManager extends Actor {
   //TODO Implement this
   def receive = {
     case AddUser(userId, email, password) =>
-      self.reply(GitoriousHelper.addUser(userId, email, password))
+      self.reply(ResAddUser(GitoriousHelper.addUser(userId, email, password)))
     case RemoveUser(user) => print("....")
     case AddProject(project, user) => print("....")
     case RemoveProject(project) => print("....")
     case AddSshKey(gitoriousUserId, sshKey) =>
-      self.reply(GitoriousHelper.addSshKey(gitoriousUserId, sshKey))
+      self.reply(ResAddSshKey(GitoriousHelper.addSshKey(gitoriousUserId, sshKey)))
     case RemoveSshKey(user) => print("....")
     case _ => log.slf4j.error("Not implemented yet.")
   }

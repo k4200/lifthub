@@ -31,8 +31,7 @@ object GitRepoManagerClient {
                        user.password.plain),
                TIMEOUT) match {
       case Some(x) => x match {
-        case UserAdded(box) => box
-        case f: Failure => f
+        case ResAddUser(box) => box
         case _ => unknowResponse
       }
       case None => timeout
@@ -44,9 +43,8 @@ object GitRepoManagerClient {
     //Send a message to the remote server
     server !! (AddSshKey(user.gitoriousUserId.is, user.sshKey.is), TIMEOUT) match {
       case Some(x) => x match {
-        case SshKeyAdded(box) => box
-        case f: Failure => f
-        case _ => unknowResponse
+        case ResAddSshKey(box) => box
+        case y => println(y); unknowResponse
       }
       case _ => Failure("failed to add an ssh key for user " + user.id)
     }
