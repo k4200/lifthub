@@ -34,6 +34,11 @@ object GitoriousHelper {
     executeScript("create_user", args)
   }
 
+  //TODO Implement this.
+  def removeUser(gitoriousUserId: Int): Box[Int] = {
+    Failure("Not implemented yet.")
+  }
+
   /**
    *
    * @return ssh key id in Gitorious 
@@ -58,12 +63,30 @@ object GitoriousHelper {
     ret
   }
 
-  def removeSshKey(user: User): Unit = {
+  //TODO Implement this.
+  def removeSshKey(gitoriousUserId: Int): Box[Int] = {
+    Failure("Not implemented yet.")
   }
 
   //TODO Implement this.
-  def changePassword(user: User): Unit = {
-    println("Not implemented yet.")
+  def changePassword(gitoriousUserId: Int): Box[Int] = {
+    Failure("Not implemented yet.")
+  }
+
+  /**
+   * 
+   */
+  //TODO Test this
+  def addProject(gitoriousUserId: Int, projectName: String): Box[Int] = {
+    val args = List(gitoriousUserId.toString, projectName)
+    executeScript("create_project", args)
+  }
+
+  //TODO Implement this.
+  def removeProject(projectId: Int): Box[Int] = {
+    val args = List(projectId)
+    //executeScript("create_project", args)
+    Failure("Not implemented yet.")
   }
 
   def executeScript(scriptName: String, args: List[String]): Box[Int] = {

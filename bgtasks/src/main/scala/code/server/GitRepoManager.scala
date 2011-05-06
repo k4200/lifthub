@@ -34,21 +34,28 @@ class GitRepoManager extends Actor {
       .setRejectionPolicy(new CallerRunsPolicy) // OK?
       .build
 
-  //TODO Implement this
   def receive = {
     case AddUser(userId, email, password) =>
-      self.reply(ResAddUser(GitoriousHelper.addUser(userId, email, password)))
-    case RemoveUser(user) => print("....")
-    case AddProject(project, user) => print("....")
-    case RemoveProject(project) => print("....")
+      val res = GitoriousHelper.addUser(userId, email, password)
+      self.reply(ResAddUser(res))
+    case RemoveUser(gitoriousUserId) =>
+      val res = GitoriousHelper.removeUser(gitoriousUserId)
+      self.reply(ResRemoveUser(res))
+    case AddProject(gitoriousUserId, projectName) =>
+      val res = GitoriousHelper.addProject(gitoriousUserId, projectName)
+      self.reply(ResAddProject(res))
+    case RemoveProject(projectId) =>
+      val res = GitoriousHelper.removeProject(projectId)
+      self.reply(ResRemoveProject(res))
     case AddSshKey(gitoriousUserId, sshKey) =>
-      self.reply(ResAddSshKey(GitoriousHelper.addSshKey(gitoriousUserId, sshKey)))
-    case RemoveSshKey(user) => print("....")
+      val res = GitoriousHelper.addSshKey(gitoriousUserId, sshKey)
+      self.reply(ResAddSshKey(res))
+    case RemoveSshKey(gitoriousUserId) =>
+      val res = GitoriousHelper.removeSshKey(gitoriousUserId)
+      self.reply(ResRemoveSshKey(res))
     case _ => log.slf4j.error("Not implemented yet.")
   }
 }
-
-
 
 
 object GitRepoManagerRunner {

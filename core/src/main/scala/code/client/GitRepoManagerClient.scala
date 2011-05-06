@@ -5,7 +5,7 @@ import akka.actor.Actor
 
 import net.liftweb.common._
 
-import net.lifthub.model.User
+import net.lifthub.model.{User, Project}
 import net.lifthub.common.event.gitrepo._
 import net.lifthub.common.event.gitrepo.response._
 
@@ -35,7 +35,6 @@ object GitRepoManagerClient {
         case _ => unknowResponse
       }
       case None => timeout
-      case _ => Failure("failed to add a user " + user.id)
     }
   }
 
@@ -46,14 +45,22 @@ object GitRepoManagerClient {
         case ResAddSshKey(box) => box
         case y => println(y); unknowResponse
       }
-      case _ => Failure("failed to add an ssh key for user " + user.id)
+      case None => timeout
+    }
+  }
+
+  def addProject(user: User, project: Project): Box[Int] = {
+    server !! (AddProject(user.gitoriousUserId.is, project.name), TIMEOUT) match {
+      case Some(x) => x match {
+        case ResAddProject(box) => box
+        case y => println(y); unknowResponse
+      }
+      case None => timeout
     }
   }
 
 //TODO implement methods for the following messages.
 // case class RemoveUser(@BeanProperty user: User) extends GitRepoEvent
-// case class AddProject(@BeanProperty project: Project,
-//                       @BeanProperty user: User) extends GitRepoEvent
 // case class RemoveProject(@BeanProperty project: Project) extends GitRepoEvent
 // case class RemoveSshKey(@BeanProperty user: User) extends GitRepoEvent
 
