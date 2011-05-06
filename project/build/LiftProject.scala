@@ -10,7 +10,6 @@ class LifthubProject(info: ProjectInfo) extends ParentProject(info) {
   lazy val bgtasks = project("bgtasks", "Lifthub bg tasks", new BgProject(_), core)
 
   override def parallelExecution = true
-  
 }
 
 protected class CoreProject(info: ProjectInfo) extends DefaultProject(info)
@@ -29,15 +28,18 @@ with AkkaProject {
     "mysql" % "mysql-connector-java" % "5.1.14", //MySQL
     "commons-io" % "commons-io" % "2.0.1",
     //"org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" withJavadoc,
-    "org.eclipse.jgit" % "org.eclipse.jgit" % "0.11.3",
+    "org.eclipse.jgit" % "org.eclipse.jgit" % "0.12.1",
     "commons-lang" % "commons-lang" % "2.5",
     "org.apache.commons" % "commons-exec" % "1.1"
+    //"org.apache.commons" % "commons-exec" % "1.1"
     //"org.scala-tools.sbt" % "sbt-launch" % "0.7.2" // doesn't work with 2.8
     // https://github.com/harrah/process
     //"org.scala-tools.sbt" % "process" % "0.1" // doesn't work with 2.8
     //"org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" sources
     //"com.h2database" % "h2" % "1.2.138"
   ) ++ super.libraryDependencies
+
+  override def compileOptions = super.compileOptions ++ Seq(Unchecked)  
 
   val akkaRemote = akkaModule("remote")
 }
@@ -59,8 +61,5 @@ extends DefaultWebProject(info) {
 protected class BgProject(info: ProjectInfo) extends DefaultProject(info)
 with AkkaProject {
   override def libraryDependencies = Set(
-    //"commons-daemon" % "commons-daemon" % "1.0.3",
-    //"org.apache.commons" % "commons-daemon" % "1.0.3",
-    //"org.mortbay.jetty" % "jetty" % "6.1.26"
   ) ++ super.libraryDependencies
 }

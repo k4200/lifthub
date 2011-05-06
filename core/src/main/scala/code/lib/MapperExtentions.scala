@@ -36,5 +36,28 @@ trait AggregateFunctions[A<:Mapper[A]] {
   }
 }
 
+/**
+ * Holds the plain text when a password is set.
+ */
+abstract class MappedPasswordWithPlainWhenSet[A<:Mapper[A]](override val fieldOwner: A)
+extends MappedPassword[A](fieldOwner) {
+  var plain: String = ""
+  override def set(value: String): String = {
+    plain = value
+    super.set(value)
+  }
+}
+/*
+trait HoldsPlainWhenSet[A<:Mapper[A]] {
+  self: MappedPassword[A] =>
+  var plain: String = ""
+  override def set(value: String): String = {
+    plain = value
+    self.super.set(value)
+  }
+}
+*/
+
+
 }
 }

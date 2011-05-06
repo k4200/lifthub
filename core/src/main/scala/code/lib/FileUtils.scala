@@ -13,7 +13,13 @@ object FileUtils {
     p.close()
     !p.checkError
   }
-
+  
+  /**
+   * Usage: <br>
+   * FileUtils.printToFile(new File(fileName))(writer => {
+   *   writer.println(someStr)
+   * })
+   */
   def printToFile(f: File)(op: PrintWriter => Unit): Boolean = {
     try {
       // This may throw FileNotFoundException

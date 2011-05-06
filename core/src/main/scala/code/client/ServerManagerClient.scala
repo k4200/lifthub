@@ -6,17 +6,19 @@ import akka.actor.Actor
 import net.liftweb.common._
 
 import net.lifthub.model.Project
-import net.lifthub.common.event._
+import net.lifthub.common.event.server._
 
 //class ServerManagerClient {
 object ServerManagerClient {
-  import net.lifthub.common.ActorConfig._
+  import net.lifthub.common.ActorConfig
   val TIMEOUT = 60000
 
   def server = {
-    val actor = Actor.remote.actorFor(REGISTER_NAME, SERVER_HOST, SERVER_PORT)
-    actor.setTimeout(TIMEOUT)
-    actor
+    ActorConfig("servermanager").map { x =>
+      val actor = Actor.remote.actorFor(x.name, x.host, x.port)
+      actor.setTimeout(TIMEOUT)
+      actor
+    } get
   }
 
   def startServer(project: Project): Box[String] = {

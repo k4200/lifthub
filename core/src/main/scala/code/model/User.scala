@@ -13,6 +13,8 @@ import net.liftweb.sitemap._
 import Loc._
 
 import net.lifthub.lib.GitosisHelper
+//import net.lifthub.lib.GitoriousHelper
+import net.lifthub.client.GitRepoManagerClient
 
 
 /**
@@ -38,16 +40,43 @@ object User extends User with MetaMegaProtoUser[User] {
   // "noreply@192.168.0.10", which would be a problem.
   override def emailFrom = "noreply@lifthub.net"
 
-  //
-  override def beforeUpdate = List(user => {
-    //If the key is different from the current one.
-    if (user.sshKey.is.length > 0 && user.sshKey.dirty_?) {
-      println("new ssh key!" + user.sshKey)
-      user.registerSshKey
-    } else {
-      println("ssh key hasn't been changed.")
+  // 
+  override def afterSave = List(user => {
+    //
+    if (user.gitoriousUserId.is == 0) {
+      GitRepoManagerClient.addUser(user).map { id =>
+        user.gitoriousUserId(id)
+        user.save
+      }
     }
   })
+
+
+  // Called before 'update' not 'insert'.
+  override def beforeUpdate = {
+    def registerSshKeyIfChanged(user: User) = {
+      //If the key is different from the current one.
+      if (user.sshKey.is.length > 0 && user.sshKey.dirty_?) {
+	println("new ssh key:" + user.sshKey.is)
+	user.registerSshKey
+      } else {
+	println("ssh key hasn't been changed.")
+      }
+    }
+    // Changes the password of the account(s) associated with Lifthub,
+    // such as Gitorious
+    def changeOtherPasswordsIfChanged(user: User) = {
+      //If the passwod was changed
+      if (user.password.is.length > 0 && user.password.dirty_?) {
+	//println("new password" + user.password.plain)
+	user.changeGitoriousPassword
+      } else {
+	println("password hasn't been changed.")
+      }
+    }
+    List(registerSshKeyIfChanged, changeOtherPasswordsIfChanged)
+
+  }
 
   // ---------------- invitation -----------------------
   // https://gist.github.com/780788
@@ -185,6 +214,16 @@ class User extends MegaProtoUser[User] {
 
   def getSingleton = User // what's the "meta" server
 
+  //import net.liftweb.mapper.HoldsPlainWhenSet
+  //override lazy val password =
+  //  new MyPassword(this) with HoldsPlainWhenSet[User]
+  override lazy val password = new MyPassword2(this)
+  protected class MyPassword2(obj: User)
+	    extends MappedPasswordWithPlainWhenSet(obj) {
+    override def displayName = fieldOwner.passwordDisplayName
+  }
+ 
+
   object sshKey extends MappedTextarea(this, 1024) {
     override def dbColumnName = "ssh_key"
     override def textareaRows  = 10
@@ -192,13 +231,31 @@ class User extends MegaProtoUser[User] {
     override def displayName = "SSH public key"
   }
 
+  object gitoriousUserId extends MappedLong(this) {
+    override def dbColumnName = "gitorious_user_id"
+    override def dbDisplay_? = false
+  }
+
   /**
    *
    */
   def registerSshKey: Unit = {
-    GitosisHelper.createSshKey(this)
-    GitosisHelper.gitAddSshKey(this)
-    GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id)
+    //GitosisHelper.createSshKey(this)
+    //GitosisHelper.gitAddSshKey(this)
+    //GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id)
+
+    //GitRepoManagerClient.removeSshKey(this)
+    GitRepoManagerClient.addSshKey(this) match {
+      case Full(v) => println("ssh_key id = " + v)
+      case Empty => println ("empty??")
+      case Failure(x, _, _) => println ("Failure: '" + x + "'")
+    }
+  }
+
+  def changeGitoriousPassword: Unit = {
+    //GitRepoManagerClient.addSshKey(this) match {
+    //}
+    //GitoriousHelper.changePassword(this)
   }
 
   /**

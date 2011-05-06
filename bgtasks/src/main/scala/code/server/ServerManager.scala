@@ -13,7 +13,7 @@ import akka.dispatch.Dispatchers
 
 import java.util.concurrent.ThreadPoolExecutor._
 
-import net.lifthub.common.ActorConfig._
+import net.lifthub.common.ActorConfig
 import net.lifthub.lib.ServerInfo
 import net.lifthub.model.Project
 
@@ -67,8 +67,10 @@ class ServerManager extends Actor {
   // max 5 retries, within 5000 millis
   //self.faultHandler = OneForOneStrategy(List(classOf[Exception]), 5, 5000)
 
+  val name = ActorConfig("servermanager").get.name
+
   self.dispatcher =
-    Dispatchers.newExecutorBasedEventDrivenDispatcher(REGISTER_NAME)
+    Dispatchers.newExecutorBasedEventDrivenDispatcher(name)
       //.withNewThreadPoolWithBoundedBlockingQueue(100)
       //.setCorePoolSize(16)
       //.setMaxPoolSize(128)
@@ -76,7 +78,7 @@ class ServerManager extends Actor {
       .setRejectionPolicy(new CallerRunsPolicy) // OK?
       .build
 
-  import net.lifthub.common.event._
+  import net.lifthub.common.event.server._
   import net.lifthub.model.Project._
   def receive = {
     case Start(projectId) => 
@@ -140,7 +142,7 @@ class ServerManager extends Actor {
 }
 
 object ServerManagerRunner {
-  import net.lifthub.common.ActorConfig._
+  import net.lifthub.common.ActorConfig
 
   def initLiftMapper = {
     val boot = new Boot
@@ -148,8 +150,13 @@ object ServerManagerRunner {
   }
 
   def run = {
-    Actor.remote.start(SERVER_HOST, SERVER_PORT)
-    Actor.remote.register(REGISTER_NAME, actorOf[ServerManager])
+    ActorConfig("servermanager").map { x =>
+      Actor.remote.start(x.host, x.port)
+      Actor.remote.register(x.name, actorOf[ServerManager])
+    } getOrElse {
+      //TODO
+      print("couldn't get the config values for GitRepoManager.")
+    }
   }
 
   def main(args: Array[String]) = {

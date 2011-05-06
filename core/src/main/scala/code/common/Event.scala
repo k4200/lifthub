@@ -1,5 +1,5 @@
 package net.lifthub {
-package common.event {
+package common.event.server {
 
 //import scala.reflect.BeanInfo
 //import akka.serialization.Serializable.ScalaJSON
