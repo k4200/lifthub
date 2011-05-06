@@ -231,7 +231,7 @@ class User extends MegaProtoUser[User] {
     override def displayName = "SSH public key"
   }
 
-  object gitoriousUserId extends MappedLong(this) {
+  object gitoriousUserId extends MappedInt(this) {
     override def dbColumnName = "gitorious_user_id"
     override def dbDisplay_? = false
   }

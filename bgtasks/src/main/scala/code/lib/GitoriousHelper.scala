@@ -25,13 +25,12 @@ object GitoriousHelper {
    *
    * @return user id in Gitorious
    */
-  def addUser(user: User): Box[Int] = {
+  def addUser(userId: Int, email: String, password: String): Box[Int] = {
     // login_name = 'lifthub-' + userid
     // email = 'test@lifthub.net'
     // password = 'secretstr' 
 
-    val args = List(LOGIN_NAME_PREFIX + user.id, user.email.is,
-		    user.password.plain)
+    val args = List(LOGIN_NAME_PREFIX + userId, email, password)
     executeScript("create_user", args)
   }
 
@@ -39,23 +38,23 @@ object GitoriousHelper {
    *
    * @return ssh key id in Gitorious 
    */
-  def addSshKey(user: User): Box[Int] = {
-    // user_id
+  def addSshKey(gitoriousUserId: Int, sshKey: String): Box[Int] = {
+    // user_id (gitorious)
     // key_file eg. '/tmp/test-ssh-key'
 
-    if (user.sshKey.is.length == 0) {
+    if (sshKey.length == 0) {
       return Empty
     }
 
     val tempfile = File.createTempFile("ssh-key", ".pub")
     FileUtils.printToFile(tempfile)(writer => {
-      writer.print(user.sshKey.is)
+      writer.print(sshKey)
     })
 
-    val args = List(user.gitoriousUserId.toString, tempfile.getAbsolutePath)
+    val args = List(gitoriousUserId.toString, tempfile.getAbsolutePath)
     val ret = executeScript("create_key", args)
 
-    //tempfile.delete
+    tempfile.delete
     ret
   }
 
@@ -92,6 +91,7 @@ object GitoriousHelper {
 
     if (exitValue != 0) {
       println(stdout.toString) //Debug
+      //log.slf4j.error(stdout.toString)
     }
 
     tryo {
@@ -105,8 +105,7 @@ object GitoriousHelper {
     val boot = new Boot
     boot.boot
     User.find(1).map { user =>
-      user.password("user1pass")
-      addUser(user)
+      addUser(user.id.is.asInstanceOf[Int], user.email.is, user.password.plain)
     }
   }
 }

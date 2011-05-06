@@ -13,6 +13,7 @@ import bootstrap.liftweb.Boot
 
 import net.lifthub.common.event.gitrepo._
 import net.lifthub.common.ActorConfig
+import net.lifthub.lib.GitoriousHelper
 
 //import net.lifthub.model.Project._
 
@@ -34,11 +35,13 @@ class GitRepoManager extends Actor {
 
   //TODO Implement this
   def receive = {
-    case AddUser(user) => print("....")
+    case AddUser(userId, email, password) =>
+      self.reply(GitoriousHelper.addUser(userId, email, password))
     case RemoveUser(user) => print("....")
     case AddProject(project, user) => print("....")
     case RemoveProject(project) => print("....")
-    case AddSshKey(user) => print("....")
+    case AddSshKey(gitoriousUserId, sshKey) =>
+      self.reply(GitoriousHelper.addSshKey(gitoriousUserId, sshKey))
     case RemoveSshKey(user) => print("....")
     case _ => log.slf4j.error("Not implemented yet.")
   }

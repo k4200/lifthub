@@ -22,23 +22,27 @@ object GitRepoManagerClient {
   }
 
   val unknowResponse = Failure("Unknown response.")
+  val timeout = Failure("Time out")
 
 
   def addUser(user: User): Box[Int] = {
     //Send a message to the remote server
-    server !! (AddUser(user), TIMEOUT) match {
+    server !! (AddUser(user.id.is.asInstanceOf[Int], user.email.is,
+                       user.password.plain),
+               TIMEOUT) match {
       case Some(x) => x match {
         case UserAdded(box) => box
         case f: Failure => f
         case _ => unknowResponse
       }
+      case None => timeout
       case _ => Failure("failed to add a user " + user.id)
     }
   }
 
   def addSshKey(user: User): Box[Int] = {
     //Send a message to the remote server
-    server !! (AddSshKey(user), TIMEOUT) match {
+    server !! (AddSshKey(user.gitoriousUserId.is, user.sshKey.is), TIMEOUT) match {
       case Some(x) => x match {
         case SshKeyAdded(box) => box
         case f: Failure => f
@@ -51,7 +55,7 @@ object GitRepoManagerClient {
 //TODO implement methods for the following messages.
 // case class RemoveUser(@BeanProperty user: User) extends GitRepoEvent
 // case class AddProject(@BeanProperty project: Project,
-// 		      @BeanProperty user: User) extends GitRepoEvent
+//                       @BeanProperty user: User) extends GitRepoEvent
 // case class RemoveProject(@BeanProperty project: Project) extends GitRepoEvent
 // case class RemoveSshKey(@BeanProperty user: User) extends GitRepoEvent
 
@@ -69,7 +73,8 @@ object GitRepoManagerClient {
     println("GitRepoManagerClient#main")
     addSshKey(user) match {
       case Full(x) => println(x)
-      case _ => println("failed")
+      case Empty => println("Empty returned")
+      case Failure(x, _, _) => println(x)
     }
   }
 }
