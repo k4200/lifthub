@@ -47,6 +47,8 @@ object User extends User with MetaMegaProtoUser[User] {
       GitRepoManagerClient.addUser(user).map { id =>
         user.gitoriousUserId(id)
         user.save
+        //
+        //GitRepoManagerClient.addSshKey(user, adminSshKey)
       }
     }
   })
