@@ -15,11 +15,11 @@ import net.lifthub.model._
 
 
 object GitoriousHelper {
-  // /opt/nginx/html/gitorious
   val TIMEOUT = 20000
   val LOGIN_NAME_PREFIX = "lifthub-"
 
-  val rootDir = Props.get("git.gitorious.rootdir") openOr ""
+  val rootDir = Props.get("git.gitorious.rootdir") openOr "/opt/nginx/html/gitorious"
+  val adminSshKeyPath = Props.get("git.path.admin.pubkey") openOr "/home/lifthub/.ssh/id_rsa.pub"
 
   /**
    *
@@ -34,9 +34,13 @@ object GitoriousHelper {
     executeScript("create_user", args)
   }
 
-  //TODO Implement this.
+  /**
+   * Removes the given user as well as all the projects
+   * and repositories that the user owns.
+   */
   def removeUser(gitoriousUserId: Int): Box[Int] = {
-    Failure("Not implemented yet.")
+    val args = List(gitoriousUserId.toString)
+    executeScript("delete_user", args)
   }
 
   /**
@@ -63,9 +67,21 @@ object GitoriousHelper {
     ret
   }
 
-  //TODO Implement this.
+  /**
+   * Adds the public key of the admin to the list of the authorized keys
+   * of the given user.
+   */
+  def addAdminSshKey(gitoriousUserId: Int): Box[Int] = {
+    val args = List(gitoriousUserId.toString, adminSshKeyPath)
+    executeScript("create_key", args)
+  }
+
+  /**
+   * Removes ALL the keys associated with the given user.
+   */
   def removeSshKey(gitoriousUserId: Int): Box[Int] = {
-    Failure("Not implemented yet.")
+    val args = List(gitoriousUserId.toString)
+    executeScript("remove_keys_by_user", args)
   }
 
   //TODO Implement this.
@@ -74,20 +90,38 @@ object GitoriousHelper {
   }
 
   /**
-   * 
+   * Adds an empty Gitorious project.
+   * (The project won't have any repositories.)
    */
-  //TODO Test this
   def addProject(gitoriousUserId: Int, projectName: String): Box[Int] = {
     val args = List(gitoriousUserId.toString, projectName)
     executeScript("create_project", args)
   }
 
-  //TODO Implement this.
+  /**
+   * Deletes a project and all the repositories belonging to it.
+   */
   def removeProject(projectId: Int): Box[Int] = {
-    val args = List(projectId)
-    //executeScript("create_project", args)
-    Failure("Not implemented yet.")
+    val args = List(projectId.toString)
+    executeScript("delete_project", args)
   }
+
+  /**
+   * Adds a repository.
+   * 
+   * On Gitorious, a project can have multiple repositories while Gitosis
+   * has only "repository".
+   *
+   * To be simple, when a user creates a project on  Lifthub, it will also
+   * create a repository associated with the project. In other words, 1 to 1
+   * relationship between projects and repositories.
+   * 
+   */
+  def addRepository(gitoriousUserId: Int, projectId: Int, projectName: String): Box[Int] = {
+    val args = List(gitoriousUserId.toString, projectId.toString, projectName)
+    executeScript("create_repository", args)
+  }
+
 
   def executeScript(scriptName: String, args: List[String]): Box[Int] = {
     val env = EnvironmentUtils.getProcEnvironment.asInstanceOf[java.util.HashMap[String, String]]

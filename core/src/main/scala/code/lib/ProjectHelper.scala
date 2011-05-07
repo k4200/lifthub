@@ -7,9 +7,7 @@ import net.liftweb.common._
 import net.liftweb.util._
 import Helpers._
 
-import net.lifthub.model.User
-import net.lifthub.model.Project
-import net.lifthub.model.ProjectTemplate
+import net.lifthub.model.{User, Project, ProjectTemplate}
 
 import org.apache.commons.io.{FileUtils => CommonsFileUtils}
 
@@ -295,23 +293,9 @@ object ProjectHelper {
     updateWorkspace(project)
   }
 
-  /**
-   * Adds the user to gitosis and copy the template.
-   * The changes need to be committed by using
-   * <code>commitAndPushProject</code>.
-   */
   def createProject(projectInfo: ProjectInfo, user: User) = {
-    addUserToGitosis(projectInfo, user)
+    //addUserToGitosis(projectInfo, user)
     copyTemplate(projectInfo)
-    //commitAndPushProject(projectInfo)
-  }
-
-  def addUserToGitosis(projectInfo: ProjectInfo, user: User): Boolean = {
-    GitosisHelper.addEntry2Conf(projectInfo, user) &&
-    GitosisHelper.gitAddConf() &&
-    GitosisHelper.createSshKey(user) &&
-    GitosisHelper.gitAddSshKey(user) &&
-    GitosisHelper.commitAndPush("Added a user: " + user.email)
   }
 
   def deleteProject(projectInfo: ProjectInfo) = {
@@ -327,18 +311,25 @@ object ProjectHelper {
     }
   }
 
-  //TODO shoud be private --------
+  /**
+   * Copies the template to the workspace.
+   * The changes need to be committed by using
+   * <code>commitAndPushProject</code>.
+   */
   def copyTemplate(projectInfo: ProjectInfo): Boolean = {
     try {
       CommonsFileUtils.copyDirectory(projectInfo.templatePath, projectInfo.path)
-//       val sbt = projectInfo.path + "/sbt"
-//       sbt.setExecutable(true)
       true
     } catch {
       case e: java.io.IOException => false
     }
   }
 
+
+  /**
+   * The name of this method is misleading.
+   * It actually does init, commit and push.
+   */
   def commitAndPushProject(projectInfo: ProjectInfo,
                            dryRun: Boolean = false): Boolean = {
     val builder = new FileRepositoryBuilder()
@@ -368,6 +359,7 @@ object ProjectHelper {
       git.push().setRefSpecs(refSpec).setDryRun(dryRun).setRemote(projectInfo.gitRepoRemote).call()
     } catch {
       case e: Exception  =>
+	//TODO
         e.printStackTrace
         println(e.getCause)
         return false

@@ -25,6 +25,11 @@ object GitRepoManagerClient {
   val timeout = Failure("Time out")
 
 
+  /**
+   * Adds the given user to the system.
+   * This also does initial setup like adding the admin ssh key
+   * to the user's authorized keys.
+   */
   def addUser(user: User): Box[Int] = {
     //Send a message to the remote server
     server !! (AddUser(user.id.is.asInstanceOf[Int], user.email.is,
@@ -32,6 +37,16 @@ object GitRepoManagerClient {
                TIMEOUT) match {
       case Some(x) => x match {
         case ResAddUser(box) => box
+        case _ => unknowResponse
+      }
+      case None => timeout
+    }
+  }
+
+  def removeUser(user: User): Box[Int] = {
+    server !! (RemoveUser(user.gitoriousUserId.is), TIMEOUT) match {
+      case Some(x) => x match {
+        case ResRemoveUser(box) => box
         case _ => unknowResponse
       }
       case None => timeout
@@ -49,10 +64,30 @@ object GitRepoManagerClient {
     }
   }
 
+  def removeSshKey(user: User): Box[Int] = {
+    server !! (RemoveSshKey(user.gitoriousUserId.is), TIMEOUT) match {
+      case Some(x) => x match {
+        case ResRemoveSshKey(box) => box
+        case _ => unknowResponse
+      }
+      case None => timeout
+    }
+  }
+
   def addProject(user: User, project: Project): Box[Int] = {
     server !! (AddProject(user.gitoriousUserId.is, project.name), TIMEOUT) match {
       case Some(x) => x match {
         case ResAddProject(box) => box
+        case y => println(y); unknowResponse
+      }
+      case None => timeout
+    }
+  }
+
+  def removeProject(project: Project): Box[Int] = {
+    server !! (RemoveProject(project.gitoriousProjectId.is), TIMEOUT) match {
+      case Some(x) => x match {
+        case ResRemoveProject(box) => box
         case y => println(y); unknowResponse
       }
       case None => timeout

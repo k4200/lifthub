@@ -14,6 +14,7 @@ import scala.xml.Text
 
 import net.lifthub.model._
 import net.lifthub.lib._
+import net.lifthub.client.GitRepoManagerClient
 
 object Project extends Project with LongKeyedMetaMapper[Project]
 with UserEditableCRUDify[Long, Project]
@@ -121,19 +122,36 @@ with AggregateFunctions[Project]
     user <- User.find(By(User.id, project.userId)))
     yield {
       val projectInfo = ProjectInfo(project)
-      ProjectHelper.createProject(projectInfo, user)
+      ProjectHelper.copyTemplate(projectInfo)
       ProjectHelper.createProps(projectInfo, dbInfo)
       ProjectHelper.commitAndPushProject(projectInfo)
 
       // Copy the jail template and create a config file for jetty.
+      //TODO Move 
       val serverInfo = ServerInfo(project)
       serverInfo.setupNewServer
 
       // nginx
+      //TODO Move 
       val nginxConf = NginxConf(project)
       nginxConf.writeToFile
     }) getOrElse {
       println("error...") //TODO rollback
+    }
+  })
+
+  // 
+  override def afterSave = List(project => {
+    //
+    if (project.gitoriousProjectId.is == 0) {
+      for(user <- User.find(By(User.id, project.userId));
+	  id <- GitRepoManagerClient.addProject(user, project))
+      yield {
+        project.gitoriousProjectId(id)
+        project.save
+        //
+        //GitRepoManagerClient.addSshKey(user, adminSshKey)
+      }
     }
   })
 
@@ -154,21 +172,16 @@ with AggregateFunctions[Project]
       }
     }
 
-    // Remove the entry from gitosis.
-    val pi = ProjectInfo(project)
-    GitosisHelper.removeEntryFromConf(pi)
-    GitosisHelper.gitAddConf
-    GitosisHelper.commitAndPush("Remove project " + project.name)
+    // Remove the project from the git repo.
+    GitRepoManagerClient.removeProject(project)
 
-    //TODO Remove the repository itself.
-    // This requires "gitosis" user privilege, so be careful.
 
     // Delete the server environment.
     val si = ServerInfo(project)
     si.deleteServer
 
     // Remove the project files.
-    ProjectHelper.deleteProject(pi)
+    ProjectHelper.deleteProject(project.info)
 
     // Delete the nginx conf file.
     NginxConf.remove(project)
@@ -243,6 +256,12 @@ with UserEditableKeyedMapper[Long, Project]
   object status extends MappedEnum[Project, Status.type](this, Status) {
     override def dbDisplay_? = false
     override def dbColumnName = "status"
+  }
+
+  //
+  object gitoriousProjectId extends MappedInt(this) {
+    override def dbColumnName = "gitorious_project_id"
+    override def dbDisplay_? = false
   }
 
   // The below methods are a temporary solution.

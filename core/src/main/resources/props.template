@@ -17,8 +17,8 @@ db.password=
 #jail.path.webappdir=/home/lifthubuser/webappdir
 #jail.path.confdir=/home/lifthubuser/etc
 
-
-git.admin.email=git@lifthub.net
+git.admin.email=lifthub@git.lifthub.net
+git.path.admin.pubkey=/home/lifthub/.ssh/id_rsa.pub
 
 #
 git.gitorious.rootdir=/opt/nginx/html/gitorious

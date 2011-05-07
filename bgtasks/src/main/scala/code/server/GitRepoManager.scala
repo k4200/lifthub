@@ -1,6 +1,8 @@
 package net.lifthub {
 package server {
 
+import net.liftweb.common._
+
 import akka.actor.Actor
 import akka.actor.Actor._
 import akka.config.Supervision._
@@ -36,8 +38,14 @@ class GitRepoManager extends Actor {
 
   def receive = {
     case AddUser(userId, email, password) =>
-      val res = GitoriousHelper.addUser(userId, email, password)
-      self.reply(ResAddUser(res))
+      val res1 = GitoriousHelper.addUser(userId, email, password)
+      // res2 isn't used currently.
+      val res2 = res1 match {
+        case Full(gitoriousUserId) =>
+          GitoriousHelper.addAdminSshKey(gitoriousUserId)
+        case _ => Failure("Admin SSH key wasn't added because it had failed to create a user.")
+      }
+      self.reply(ResAddUser(res1))
     case RemoveUser(gitoriousUserId) =>
       val res = GitoriousHelper.removeUser(gitoriousUserId)
       self.reply(ResRemoveUser(res))
