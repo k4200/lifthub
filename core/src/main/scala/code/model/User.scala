@@ -176,7 +176,7 @@ object User extends User with MetaMegaProtoUser[User] {
             {S.??("sign.up.validation.link")}
             <br/><a href={validationLink}>{validationLink}</a>
             <br/>Your initial password is shown below:
-            <br/> {plainPassword} 
+            <br/> {plainPassword}<br/>
             <br/>Please change it first time you log in.
             <br/>
             {S.??("thank.you")}
