@@ -85,7 +85,7 @@ with AggregateFunctions[Project]
 
   private def checkSpecialNames(project: Project): List[FieldError] = {
     //TODO Temporary
-    val ngNames = List("www", "test", "mysql", "lifthub", "lifthub_test",
+    val ngNames = List("www", "skr", "git", "test", "mysql", "lifthub", "lifthub_test",
                        "information_schema", "basejail", "newjail")
     println(ngNames)
     println(project.name.is)
@@ -210,14 +210,7 @@ with UserEditableKeyedMapper[Long, Project]
   object database extends MappedLongForeignKey(this, UserDatabase) {
     //TODO should be done automatically.
     override def validSelectValues = Full(
-      (0L, "Create a new one (recommended)") ::
-      (User.currentUser match {
-        case Full(user) =>
-          UserDatabase.findAll(By(UserDatabase.userId, user.id)).map {
-            x => (x.id.is, x.databaseType.is + ":" + x.name.is)
-         }
-        case _ => Nil
-      })
+      (0L, "Create a new one (recommended)") :: Nil
     )
   }
 
