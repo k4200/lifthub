@@ -128,13 +128,13 @@ with AggregateFunctions[Project]
 
       // Copy the jail template and create a config file for jetty.
       //TODO Move 
-      val serverInfo = ServerInfo(project)
-      serverInfo.setupNewServer
+      //val serverInfo = ServerInfo(project)
+      //serverInfo.setupNewServer
 
       // nginx
       //TODO Move 
-      val nginxConf = NginxConf(project)
-      nginxConf.writeToFile
+      //val nginxConf = NginxConf(project)
+      //nginxConf.writeToFile
     }) getOrElse {
       println("error...") //TODO rollback
     }
@@ -177,8 +177,8 @@ with AggregateFunctions[Project]
 
 
     // Delete the server environment.
-    val si = ServerInfo(project)
-    si.deleteServer
+    //val si = ServerInfo(project)
+    //si.deleteServer
 
     // Remove the project files.
     ProjectHelper.deleteProject(project.info)

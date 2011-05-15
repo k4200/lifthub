@@ -28,26 +28,26 @@ class JettyExecutor extends Actor {
 
   /**
    * Replies a Box[String].
-   * This method blocks.
+   * This is a blocking operation.
    */
   def receive = {
-    case Start(serverInfo) =>
-      val cmd = List("sudo", COMMAND, "start", serverInfo.projectName, serverInfo.stopPort.toString)
+    case Start(projectName, stopPort) =>
+      val cmd = List("sudo", COMMAND, "start", projectName, stopPort.toString)
       self.reply(tryo {
-	killAll(serverInfo)
-        execute(serverInfo, cmd)
-        checkProcess(serverInfo)
+	killAll(projectName)
+        execute(cmd)
+        checkProcess(projectName)
       })
-    case Stop(serverInfo) =>
-      val cmd = List(COMMAND, "stop", serverInfo.projectName, serverInfo.stopPort.toString)
+    case Stop(projectName, stopPort) =>
+      val cmd = List(COMMAND, "stop", projectName, stopPort.toString)
       self.reply(tryo {
-        execute(serverInfo, cmd)
+        execute(cmd)
 	Full("stopped")
       })
-    case Clean(serverInfo) =>
-      val cmd = List("sudo", COMMAND, "clean", serverInfo.projectName)
+    case Clean(projectName) =>
+      val cmd = List("sudo", COMMAND, "clean", projectName)
       self.reply(tryo {
-        execute(serverInfo, cmd)
+        execute(cmd)
   	Full("cleand up")
       })
   }
@@ -55,11 +55,11 @@ class JettyExecutor extends Actor {
   /**
    * TODO Implement this.
    */
-  def kill(server: ServerInfo) = {
-    val args = List("kill", server.projectName)
+  def kill(projectName: String) = {
+    val args = List("kill", projectName)
   }
 
-  def execute(server: ServerInfo, cmd: List[String]) = {
+  def execute(cmd: List[String]) = {
     val cmdLine = new CommandLine(cmd.head)
     cmd.tail.foreach(cmdLine.addArgument _)
 
@@ -82,9 +82,10 @@ class JettyExecutor extends Actor {
   /**
    * Checks if the server has been started correctly.
    */
-  def checkProcess(serverInfo: ServerInfo): Box[String] = {
-    def parseLog(serverInfo: ServerInfo): Box[Boolean] = {
-      val log = scala.io.Source.fromFile(serverInfo.executeLogPath).mkString
+  def checkProcess(projectName: String): Box[String] = {
+    def parseLog(projectName: String): Box[Boolean] = {
+      //val log = scala.io.Source.fromFile(serverInfo.executeLogPath).mkString
+      val log = scala.io.Source.fromFile(ServerInfo.JAIL_LOG_DIR).mkString
       if (log.contains(KEYWORD_FAILURE)) {
 	Full(false)
       } else if (log.contains(KEYWORD_SUCCESS)) {
@@ -98,14 +99,14 @@ class JettyExecutor extends Actor {
     while (true) {
       if (System.currentTimeMillis - start > TIMEOUT) {
 	//timeout occured.
-	kill(serverInfo)
+	kill(projectName)
         return  Failure("Timeout.")
       }
-      parseLog(serverInfo) match {
+      parseLog(projectName) match {
         case Full(true) =>
           return  Full("Server started.")
         case Full(false) =>
-          kill(serverInfo)
+          kill(projectName)
           return  Failure("An exception occured.")
         case Empty =>
           println("still running")
@@ -120,10 +121,10 @@ class JettyExecutor extends Actor {
   /**
    * Kills all the remaining processes associated with this server.
    */
-  def killAll(serverInfo: ServerInfo) = {
+  def killAll(projectName: String) = {
     //TODO Implement this.
     // For now, kill the process of the pid in the pid file. 
-    kill(serverInfo)
+    kill(projectName)
   }
 
 }

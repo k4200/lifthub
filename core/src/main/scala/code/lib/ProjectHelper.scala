@@ -22,31 +22,9 @@ import storage.file.{FileRepository, FileRepositoryBuilder}
 import transport.{Transport, RefSpec, RemoteConfig, URIish}
 
 
-case class ServerInfo(projectName: String, port: Int, version: String) {
-  //Paths
-  val JAIL_SETUP_PROG = Props.get("jailer.path.bin.setup") openOr
-    "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
-  //TODO should be JAILER_PARENT_DIR ?
-  val JAIL_PARENT_DIR = Props.get("jailer.path.jailroot") openOr
-    "/home/lifthubuser/chroot"
-  //TODO jetty-6
-  val JAILER_TEMPLATE_DIR = Props.get("") openOr
-    "/home/lifthubuser/servers/jetty-6/etc"
-
+case class ServerInfo(projectName: String, ipAddr: String, port: Int, version: String) {
+  import ServerInfo._
   val jailRootPath = JAIL_PARENT_DIR + "/" + projectName
-
-  val JAIL_SERVER_DIR = Props.get("jail.path.serverroot") openOr
-    "/home/lifthubuser/servers"
-  //TODO only jetty-6
-  //  "/home/lifthubuser/logs"
-  val JAIL_LOG_DIR = Props.get("jail.path.log") openOr
-    "/home/lifthubuser/servers/jetty-6/logs"
-  //TODO only jetty-6, not a constant
-  val JAIL_WEBAPP_DIR = Props.get("jail.path.webappdir") openOr
-    "/home/lifthubuser/servers/jetty-6/userwebapps/" + projectName
-  //TODO jetty-6
-  val JAIL_CONF_DIR = Props.get("jail.path.confdir") openOr
-    "/home/lifthubuser/servers/jetty-6/etc/lifthub"
 
   //TODO
   val serverName = "jetty"
@@ -62,30 +40,6 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
   //val pidFilePath = jailRootPath + basePath + "/logs/" + projectName + ".pid"
   val stopPort = port + 1000 //TODO
 
-  /**
-   * Sets up a new server runtime environment.
-   *
-   */
-  def setupNewServer = {
-    executeJailSetupProgram("create")
-    writeConfFile
-  }
-
-  def deleteServer = {
-    executeJailSetupProgram("delete")
-  }
-
-  /**
-   * Creates a config file for the application server.
-   * Currently, only jetty is supported.
-   * This must be called after the chroot is created.
-   */
-  def writeConfFile: Boolean = {
-    FileUtils.printToFile(confPath)(writer => {
-      writer.write(confString)
-    })
-  }
-
   def confString: String = {
     import scala.io.Source
     val tmpl = Source.fromFile(templatePath)
@@ -95,28 +49,32 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
       portPattern.replaceAllIn(tmpl.mkString, port.toString),
       projectName)
   }
-
-  /**
-   * Executes the jail setup program with sudo.
-   * @parameter cmd either "create" or "delete"
-   */
-  def executeJailSetupProgram(cmd: String) = {
-    //TODO Test this. this may throw an exception.
-    import org.apache.commons.exec._
-    val cmdLine = new CommandLine("sudo")
-    cmdLine.addArgument(JAIL_SETUP_PROG)
-    cmdLine.addArgument(cmd)
-    cmdLine.addArgument(projectName)
-
-    val executor = new DefaultExecutor
-    //executor.setWorkingDirectory(new File(JAIL_PARENT_DIR))
-    executor.execute(cmdLine)  // synchronous
-  }
 }
 
 object ServerInfo {
+  //Paths
+  val JAIL_SETUP_PROG = Props.get("jailer.path.bin.setup") openOr
+    "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
+  //TODO should be JAILER_PARENT_DIR ?
+  val JAIL_PARENT_DIR = Props.get("jailer.path.jailroot") openOr
+    "/home/jails"
+  //!! Spec change: 
+  val JAILER_TEMPLATE_DIR = Props.get("") openOr
+    "/home/lifthub/tmpl"
+
+  val JAIL_SERVER_DIR = Props.get("jail.path.serverroot") openOr
+    "/home/lifthubuser/server"
+  //  "/home/lifthubuser/logs"
+  val JAIL_LOG_DIR = Props.get("jail.path.log") openOr
+    "/home/lifthubuser/logs"
+  val JAIL_WEBAPP_DIR = Props.get("jail.path.webappdir") openOr
+    "/home/lifthubuser/webappdir"
+  val JAIL_CONF_DIR = Props.get("jail.path.confdir") openOr
+    "/home/lifthubuser/etc"
+
   def apply(project: Project): ServerInfo = {
-    this(project.name, project.port, "6")
+    //TODO dummy IP address
+    this(project.name, "127.0.0.200", project.port, "6")
   }
 }
 
