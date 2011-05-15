@@ -3,6 +3,9 @@ package server.internalevent {
 
 import net.lifthub.lib.ServerInfo
 
+/**
+ * Events sent from ServerManager to Executor (JettyExecutor etc.)
+ */
 sealed trait InternalEvent
 
 /**

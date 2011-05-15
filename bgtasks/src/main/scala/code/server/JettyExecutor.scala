@@ -13,6 +13,7 @@ import akka.actor.Actor._
 import org.apache.commons.exec._
 
 import internalevent._
+import internalevent.response._
 
 import net.lifthub.lib.ServerInfo
 
@@ -32,24 +33,29 @@ class JettyExecutor extends Actor {
    */
   def receive = {
     case Start(projectName, stopPort) =>
+      import scala.util.control.Exception.allCatch
       val cmd = List("sudo", COMMAND, "start", projectName, stopPort.toString)
-      self.reply(tryo {
-	killAll(projectName)
-        execute(cmd)
-        checkProcess(projectName)
-      })
+      self.reply(ResStart(
+	allCatch opt {
+	  killAll(projectName)
+          execute(cmd)
+	} match {
+	  case Some(_) => checkProcess(projectName)
+	  case None => Failure("Failed")
+	}
+      ))
     case Stop(projectName, stopPort) =>
       val cmd = List(COMMAND, "stop", projectName, stopPort.toString)
-      self.reply(tryo {
+      self.reply(ResStop(tryo {
         execute(cmd)
-	Full("stopped")
-      })
+	"Succeeded to stop %s.".format(projectName)
+      }))
     case Clean(projectName) =>
       val cmd = List("sudo", COMMAND, "clean", projectName)
-      self.reply(tryo {
+      self.reply(ResClean(tryo {
         execute(cmd)
-  	Full("cleand up")
-      })
+	"Succeeded to clean up %s.".format(projectName)
+      }))
   }
 
   /**
@@ -109,7 +115,7 @@ class JettyExecutor extends Actor {
           kill(projectName)
           return  Failure("An exception occured.")
         case Empty =>
-          println("still running")
+          println("still running") //Debug
         case _ =>
           return  Failure("Unknown error.")
       }

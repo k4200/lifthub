@@ -33,6 +33,7 @@ case class ServerInfo(projectName: String, ipAddr: String, port: Int, version: S
   val deployDirPath = jailRootPath + JAIL_WEBAPP_DIR
   val confPath = jailRootPath + JAIL_CONF_DIR + "/" + projectName + ".xml"
 
+  //TODO Move this cuz it is the same for all the projects.
   val templatePath = jailRootPath + JAILER_TEMPLATE_DIR + "/jetty.xml.tmpl"
   val logDirPath = jailRootPath + JAIL_LOG_DIR
   val executeLogPath = logDirPath + "/" + projectName + "-execute.log"
@@ -135,7 +136,12 @@ case class ProjectInfo (name: String, projectTemplate: ProjectTemplate) {
 
   def sbtLogPath = path + "-sbt.log"
 
-  val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
+  //TODO
+  val gitRepoRemote: String =
+    "%s:%s/%s.git".format(
+      (Props.get("git.url.root") openOr "gitorious@git.lifthub.net"),
+      name, name
+    )
 }
 object ProjectInfo {
   //Paths
@@ -174,6 +180,7 @@ object SbtHelper {
     runCommand(project, "package")
   }
 
+  // This is not an sbt command.
   def deploy(project: Project): Box[String] = {
     //TODO Hot deploy.
     val pi = ProjectInfo(project)
@@ -182,6 +189,7 @@ object SbtHelper {
       return Failure("war file doesn't exist. Build first.")
     }
     tryo {
+      //TODO remote
       CommonsFileUtils.copyFile(pi.warPath, si.deployDirPath + "/ROOT.war")
       pi.warPath.delete
       Full("Project %s successfully deployed.".format(project.name))
