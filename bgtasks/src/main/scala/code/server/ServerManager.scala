@@ -32,30 +32,40 @@ object ServerManagerCore {
   import internalevent._
   val TIMEOUT = 60000
 
-  //TODO only jetty
-  val executor = actorOf[JettyExecutor]
-  executor.start
+  val jettyExecutor = actorOf[JettyExecutor]
+  jettyExecutor.start
 
+  def unknownResponse = {
+    Failure("unknown response...")
+  }
+  
   //TODO only jetty (stopPort)
-  def start(projectName: String, stopPort: Int): Box[Any] = {
+  def start(projectName: String, stopPort: Int): Box[String] = {
+    val executor = jettyExecutor
     convertResult(executor !! (Start(projectName, stopPort), TIMEOUT))
   }
 
   //TODO only jetty (stopPort)
-  def stop(projectName: String, stopPort: Int): Box[Any] = {
+  def stop(projectName: String, stopPort: Int): Box[String] = {
+    val executor = jettyExecutor
     convertResult(executor !! (Stop(projectName, stopPort), TIMEOUT))
   }
 
-  def clean(projectName: String): Box[Any] = {
+  def clean(projectName: String): Box[String] = {
+    val executor = jettyExecutor
     convertResult(executor !! (Clean(projectName), TIMEOUT))
   }
 
   /**
    * Converts results from the executor to Box.
    */
-  def convertResult(result: Option[Any]): Box[Any] = {
+  //def convertResult(result: Option[Any]): Box[Any] = {
+  def convertResult(result: Option[Any]): Box[String] = {
     result match {
-      case Some(Full(x)) => Full(x)
+      case Some(Full(x)) => x match {
+	case s: String => Full(s)
+	case _ => Failure("unknown result")
+      }
       case Some(Failure(x,y,z)) => Failure(x,y,z)
       case Some(_) => Failure("This shouldn't happen.")
       // This shouldn't happen either because the executor checks
@@ -73,12 +83,18 @@ object ServerManagerCore {
 object RuntimeEnvironmentHelper {
   import net.lifthub.lib.FileUtils._
 
-  def create(projectName: String) = {
-    executeJailSetupProgram("create", projectName)
+  def create(projectName: String, port: Int): Box[String] = {
+    import net.lifthub.lib.NginxConf
     //writeConfFile(serverInfo)
+    val nginxConf = NginxConf(projectName, port)
+    if (nginxConf.writeToFile) {
+      executeJailSetupProgram("create", projectName)
+    } else {
+      Failure("Failed to write an nginx conf file for project " + projectName)
+    }
   }
 
-  def delete(projectName: String) = {
+  def delete(projectName: String): Box[String] = {
     executeJailSetupProgram("delete", projectName)
   }
 
@@ -122,6 +138,8 @@ object RuntimeEnvironmentHelper {
  * in ActorConfig.
  */
 class ServerManager extends Actor {
+  val TIMEOUT = 90000 //TODO hard-coded
+
   // max 5 retries, within 5000 millis
   //self.faultHandler = OneForOneStrategy(List(classOf[Exception]), 5, 5000)
 
@@ -140,48 +158,21 @@ class ServerManager extends Actor {
   import net.lifthub.model.Project._
   def receive = {
     case Start(projectName) => 
-      ServerManagerCore.start(projectName, 9000) match { //TODO hard-coded
-	case Full(x) =>
-	  //TODO Move to monitor program.
-          //project.status(Status.Running)
-          //project.save
-          self.reply(Response.STARTED)
-        case Failure(x, _, _) =>
-          println(x)
-          self.reply(Response.FAILED)
-        case _ => unexpectedResult
-      }
+      self.reply(ResStart(
+	ServerManagerCore.start(projectName, TIMEOUT)))
     case Stop(projectName) => 
-      ServerManagerCore.stop(projectName, 9000) match { //TODO hard-coded
-        case Full(x) =>
-          //project.status(Status.Stopped)
-          //project.save
-          self.reply(Response.STOPPED)
-        case Failure(x, _, _) =>
-          println(x)
-          self.reply(Response.FAILED)
-        case _ => unexpectedResult
-      }
+      self.reply(ResStop(
+	ServerManagerCore.stop(projectName, TIMEOUT)))
     case Clean(projectName) => 
-      ServerManagerCore.clean(projectName) match {
-        case Full(x) =>
-          self.reply(Response.CLEANED_UP)
-        case Failure(x, _, _) =>
-          println(x)
-          self.reply(Response.FAILED)
-        case _ => unexpectedResult
-      }
-    case Create(serverInfo) =>
+      self.reply(ResClean(
+	ServerManagerCore.clean(projectName)))
+    case Create(projectName, port) =>
       self.reply(ResCreate(
-	RuntimeEnvironmentHelper.create(serverInfo.projectName)))
-    case Delete(serverInfo) =>
+	RuntimeEnvironmentHelper.create(projectName, port)))
+    case Delete(projectName) =>
       self.reply(ResDelete(
-	RuntimeEnvironmentHelper.delete(serverInfo.projectName)))
+	RuntimeEnvironmentHelper.delete(projectName)))
     case _ => log.slf4j.info("unknown message")
-  }
-  def unexpectedResult = {
-    println("unknown error...")
-    self.reply(Response.FAILED)
   }
 }
 

@@ -26,8 +26,7 @@ object ServerManagerClient {
 
   // ---------------- actions
   def create(project: Project): Box[String] = {
-    val serverInfo = ServerInfo(Project)
-    server !! (Create(serverInfo), TIMEOUT) match {
+    server !! (Create(project.name.is, project.port.is), TIMEOUT) match {
       case Some(x) => x match {
         case ResCreate(box) => box
         case y => println(y); unknownResponse
@@ -36,28 +35,44 @@ object ServerManagerClient {
     }
   }
 
+  def delete(project: Project): Box[String] = {
+    server !! (Delete(project.name), TIMEOUT) match {
+      case Some(x) => x match {
+        case ResDelete(box) => box
+        case y => println(y); unknownResponse
+      }
+      case _ => Failure("failed to delete the environment for project " + project.id)
+    }
+  }
+
   def startServer(project: Project): Box[String] = {
     //Send a message to the remote server
     
     server !! (Start(project.name.is), TIMEOUT) match {
-      case Some(x) if x == Response.STARTED  =>
-        Full("successfully started! " + project.id)
+      case Some(x) => x match {
+	case ResStart(box) => box
+        case y => unknownResponse
+      }
       case _ => Failure("failed to start a server for " + project.id)
     }
   }
 
   def stopServer(project: Project): Box[String] = {
     server !! (Stop(project.name.is), TIMEOUT) match {
-      case Some(x) if x == Response.STOPPED  =>
-        Full("successfully stopped! " + project.id)
+      case Some(x) => x match {
+	case ResStop(box) => box
+        case y => unknownResponse
+      }
       case _ => Failure("failed to stop the server for " + project.id)
     }
   }
 
   def clean(project: Project): Box[String] = {
     server !! (Clean(project.name.is), TIMEOUT) match {
-      case Some(x) if x == Response.CLEANED_UP  =>
-        Full("successfully cleaned up! " + project.id)
+      case Some(x) => x match {
+	case ResClean(box) => box
+        case y => unknownResponse
+      }
       case _ => Failure("failed to clean the server environment for " + project.id)
     }
   }

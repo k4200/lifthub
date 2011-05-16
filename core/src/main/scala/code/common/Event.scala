@@ -14,11 +14,11 @@ sealed trait ServerEvent
 /**
  * Creates an environment.
  */
-case class Create(serverInfo: ServerInfo) extends ServerEvent
+case class Create(projectName: String, port: Int) extends ServerEvent
 /**
  * Stops the server of the project of the given ID.
  */
-case class Delete(serverInfo: ServerInfo) extends ServerEvent
+case class Delete(projectName: String) extends ServerEvent
 
 /**
  * Starts the server of the project of the given ID.
@@ -37,19 +37,6 @@ case class Stop(projectName: String) extends ServerEvent
  */
 case class Clean(projectName: String) extends ServerEvent
 
-
-
-
-/**
- * Responses from ServerManager to client
- * @deprecated
- */
-object Response {
-  val STOPPED = "Stopped"
-  val STARTED = "Started"
-  val CLEANED_UP = "Cleaned up"
-  val FAILED = "Failed"
-}
 
 
 
