@@ -2,6 +2,7 @@ package net.lifthub {
 package model {
 
 import scala.xml.NodeSeq
+import scala.util.control.Exception._
 
 import net.liftweb._
 import util.{FieldError,FieldIdentifier,StringValidators}
@@ -49,7 +50,15 @@ with AggregateFunctions[Project]
   override def beforeDelete = List(project => {
     import net.lifthub.client._
     println("Project.beforeDelete")
-    ServerManagerClient.stopServer(project)
+/*
+    ServerManagerClient.stopServer(project) match {
+      case Full(_) =>
+	// OK
+      case Failure(x, _, _) =>
+	//TODO Not FieldError. Check the source.
+        List(FieldError(Project.name, Text(x)))
+    }
+*/
   })
 
   private def checkNumberOfProjects(project: Project): List[FieldError] = {
@@ -105,11 +114,19 @@ with AggregateFunctions[Project]
     User.currentUser match {
       case Full(user) =>
         if(project.database == 0) {
-          val dbInfo = UserDatabase.createFromProject(project)
-          dbInfo.userId(user.id)
-          dbInfo.save
-          project.database(dbInfo)
-          project.userId(user.id) //TODO should be set automatically.
+	  allCatch either {
+            val dbInfo = UserDatabase.createFromProject(project)
+            dbInfo.userId(user.id)
+            dbInfo.save
+            project.database(dbInfo)
+            project.userId(user.id) //TODO should be set automatically.
+	  } match {
+	    case Left(_) =>
+              List(FieldError(Project.name,
+                              Text(S.??("failed to create a db."))))
+	    case Right(_) =>
+	      //OK
+	  }
         }
       case _ =>
         List(FieldError(Project.name,
@@ -127,7 +144,7 @@ with AggregateFunctions[Project]
       ProjectHelper.createProps(projectInfo, dbInfo)
       ProjectHelper.commitAndPushProject(projectInfo)
 
-      ServerManagerClient.create(this)
+      //ServerManagerClient.create(this)
 
       // Copy the jail template and create a config file for jetty.
       // It'll be done by flavour, so not neccesary anymore.
@@ -168,7 +185,9 @@ with AggregateFunctions[Project]
       Project.find(By(Project.database, database.id)) match {
         case Empty =>
           if(!"test".equals(System.getProperty("run.mode"))) {  
-            database.dropDatabase
+            allCatch {
+	      database.dropDatabase
+	    }
 	  }
           database.delete_!
         case _ => println("This database is used by other projects.")
@@ -176,7 +195,7 @@ with AggregateFunctions[Project]
     }
 
     // Remove the project from the git repo.
-    GitRepoManagerClient.removeProject(project)
+    //GitRepoManagerClient.removeProject(project)
 
 
     // Delete the server environment.
@@ -186,8 +205,9 @@ with AggregateFunctions[Project]
     // Remove the project files.
     ProjectHelper.deleteProject(project.info)
 
+    //TODO move
     // Delete the nginx conf file.
-    NginxConf.remove(project)
+    //NginxConf.remove(project)
   })
 
   private[model] def getAvailablePort: Int = {

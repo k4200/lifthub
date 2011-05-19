@@ -88,7 +88,7 @@ object RuntimeEnvironmentHelper {
     //writeConfFile(serverInfo)
     val nginxConf = NginxConf(projectName, port)
     if (nginxConf.writeToFile) {
-      executeJailSetupProgram("create", projectName)
+      executeJailSetupProgram("create", projectName, port.toString)
     } else {
       Failure("Failed to write an nginx conf file for project " + projectName)
     }
@@ -115,19 +115,19 @@ object RuntimeEnvironmentHelper {
    * Executes the jail setup program with sudo.
    * @parameter cmd either "create" or "delete"
    */
-  def executeJailSetupProgram(cmd: String, projectName: String): Box[String] = {
+  def executeJailSetupProgram(cmd: String, args: String*): Box[String] = {
     //TODO Test this. this may throw an exception.
     import org.apache.commons.exec._
     val cmdLine = new CommandLine("sudo")
     cmdLine.addArgument(ServerInfo.JAIL_SETUP_PROG)
     cmdLine.addArgument(cmd)
-    cmdLine.addArgument(projectName)
+    args.foreach(cmdLine.addArgument(_))
 
     val executor = new DefaultExecutor
     //executor.setWorkingDirectory(new File(ServerInfo.JAIL_PARENT_DIR)) //TODO
     tryo {
       val st = executor.execute(cmdLine)  // synchronous
-      "%s %s succeeded. (result code: %d)".format(cmd, projectName, st)
+      "%s jail %s succeeded. (result code: %d)".format(cmd, args(0), st)
     }
   }
 }

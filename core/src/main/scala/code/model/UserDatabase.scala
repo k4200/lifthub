@@ -28,14 +28,18 @@ with UserEditableCRUDify[Long, UserDatabase] {
     create.name(project.name).databaseType(dbType).username(project.name).password(plainPassword)
   }
 
+  // def createFromName(name: String): UserDatabase = {
+  //   val plainPassword = RandomStringUtils.randomAlphanumeric(8)
+  //   val dbType = DEFAULT_DBTYPE
+  //   create.name(name).databaseType(dbType).username(name).password(plainPassword)
+  // }
+
   override def afterCreate = List(userDatabase =>  {
-    val dbHelper = DbHelper.get(userDatabase.databaseType.is)
-    dbHelper.addDatabase(userDatabase)
+    userDatabase.addDatabase
   })
 
   override def afterDelete = List(userDatabase =>  {
-    val dbHelper = DbHelper.get(userDatabase.databaseType.is)
-    dbHelper.dropDatabase(userDatabase)
+    userDatabase.dropDatabase
   })
 
   override def fieldsForEditing = List(password)
@@ -118,7 +122,12 @@ with UserEditableKeyedMapper[Long, UserDatabase] {
   def plainPassword = _plainPassword
 
   //operations
-  def dropDatabase = {
+  def addDatabase: Box[String] = {
+    val dbHelper = DbHelper.get(databaseType)
+    dbHelper.addDatabase(this)
+  }
+
+  def dropDatabase: Box[String] = {
     val dbHelper = DbHelper.get(databaseType)
     dbHelper.dropDatabase(this)
   }
