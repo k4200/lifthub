@@ -21,7 +21,7 @@ object GitRepoManagerClient {
     } get
   }
 
-  val unknowResponse = Failure("Unknown response.")
+  val unknownResponse = Failure("Unknown response.")
   val timeout = Failure("Time out")
 
 
@@ -37,7 +37,7 @@ object GitRepoManagerClient {
                TIMEOUT) match {
       case Some(x) => x match {
         case ResAddUser(box) => box
-        case _ => unknowResponse
+        case _ => unknownResponse
       }
       case None => timeout
     }
@@ -47,7 +47,7 @@ object GitRepoManagerClient {
     server !! (RemoveUser(user.gitoriousUserId.is), TIMEOUT) match {
       case Some(x) => x match {
         case ResRemoveUser(box) => box
-        case _ => unknowResponse
+        case _ => unknownResponse
       }
       case None => timeout
     }
@@ -58,7 +58,7 @@ object GitRepoManagerClient {
     server !! (AddSshKey(user.gitoriousUserId.is, user.sshKey.is), TIMEOUT) match {
       case Some(x) => x match {
         case ResAddSshKey(box) => box
-        case y => println(y); unknowResponse
+        case y => println(y); unknownResponse
       }
       case None => timeout
     }
@@ -68,7 +68,7 @@ object GitRepoManagerClient {
     server !! (RemoveSshKey(user.gitoriousUserId.is), TIMEOUT) match {
       case Some(x) => x match {
         case ResRemoveSshKey(box) => box
-        case _ => unknowResponse
+        case _ => unknownResponse
       }
       case None => timeout
     }
@@ -78,7 +78,7 @@ object GitRepoManagerClient {
     server !! (AddProject(user.gitoriousUserId.is, project.name), TIMEOUT) match {
       case Some(x) => x match {
         case ResAddProject(box) => box
-        case y => println(y); unknowResponse
+        case y => println(y); unknownResponse
       }
       case None => timeout
     }
@@ -88,7 +88,7 @@ object GitRepoManagerClient {
     server !! (RemoveProject(project.gitoriousProjectId.is), TIMEOUT) match {
       case Some(x) => x match {
         case ResRemoveProject(box) => box
-        case y => println(y); unknowResponse
+        case y => println(y); unknownResponse
       }
       case None => timeout
     }

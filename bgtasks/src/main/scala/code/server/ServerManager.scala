@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadPoolExecutor._
 
 import net.lifthub.common.ActorConfig
 import net.lifthub.lib.ServerInfo
+import net.lifthub.lib.FileUtils
 import net.lifthub.model.Project
 
 //import org.apache.commons.exec._
@@ -30,20 +31,20 @@ object ServerManagerCore {
   import internalevent._
   val TIMEOUT = 60000
 
-  //TODO ok?
+  //TODO only jetty
   val executor = actorOf[JettyExecutor]
   executor.start
 
-  def start(server: ServerInfo): Box[Any] = {
-    convertResult(executor !! (Start(server), TIMEOUT))
+  def start(projectName: String, stopPort: Int): Box[Any] = {
+    convertResult(executor !! (Start(projectName, stopPort), TIMEOUT))
   }
 
-  def stop(server: ServerInfo): Box[Any] = {
-    convertResult(executor !! (Stop(server), TIMEOUT))
+  def stop(projectName: String, stopPort: Int): Box[Any] = {
+    convertResult(executor !! (Stop(projectName, stopPort), TIMEOUT))
   }
 
-  def clean(server: ServerInfo): Box[Any] = {
-    convertResult(executor !! (Clean(server), TIMEOUT))
+  def clean(projectName: String): Box[Any] = {
+    convertResult(executor !! (Clean(projectName), TIMEOUT))
   }
 
   /**
@@ -58,6 +59,52 @@ object ServerManagerCore {
     }
   }
 }
+
+
+/**
+ * 
+ */
+object RuntimeEnvironmentHelper {
+  import net.lifthub.lib.FileUtils._
+
+  def create(serverInfo: ServerInfo) = {
+    executeJailSetupProgram("create", serverInfo)
+    writeConfFile(serverInfo)
+  }
+
+  def delete(serverInfo: ServerInfo) = {
+    executeJailSetupProgram("delete", serverInfo)
+  }
+
+  /**
+   * Creates a config file for the application server.
+   * Currently, only jetty is supported.
+   * This must be called after the chroot is created.
+   */
+  def writeConfFile(serverInfo: ServerInfo): Boolean = {
+    FileUtils.printToFile(serverInfo.confPath)(writer => {
+      writer.write(serverInfo.confString)
+    })
+  }
+
+  /**
+   * Executes the jail setup program with sudo.
+   * @parameter cmd either "create" or "delete"
+   */
+  def executeJailSetupProgram(cmd: String, serverInfo: ServerInfo) = {
+    //TODO Test this. this may throw an exception.
+    import org.apache.commons.exec._
+    val cmdLine = new CommandLine("sudo")
+    cmdLine.addArgument(ServerInfo.JAIL_SETUP_PROG)
+    cmdLine.addArgument(cmd)
+    cmdLine.addArgument(serverInfo.projectName)
+
+    val executor = new DefaultExecutor
+    //executor.setWorkingDirectory(new File(serverInfo.JAIL_PARENT_DIR)) //TODO
+    executor.execute(cmdLine)  // synchronous
+  }
+}
+
 
 /**
  * This actor runs as a service and listens on the port specified
@@ -85,10 +132,10 @@ class ServerManager extends Actor {
       Project.find(By(Project.id, projectId)) match {
         case Full(project) =>
           val server = ServerInfo(project)
-          ServerManagerCore.start(server) match {
+          ServerManagerCore.start(server.projectName, server.stopPort) match {
             case Full(x) =>
-              project.status(Status.Running)
-              project.save
+              //project.status(Status.Running)
+              //project.save
               self.reply(Response.STARTED)
               println("started " + projectId)
             case Failure(x, _, _) =>
@@ -102,7 +149,7 @@ class ServerManager extends Actor {
       Project.find(By(Project.id, projectId)) match {
         case Full(project) =>
           val server = ServerInfo(project)
-          ServerManagerCore.stop(server) match {
+          ServerManagerCore.stop(server.projectName, server.stopPort) match {
             case Full(x) =>
               project.status(Status.Stopped)
               project.save
@@ -118,7 +165,7 @@ class ServerManager extends Actor {
       Project.find(By(Project.id, projectId)) match {
         case Full(project) =>
           val server = ServerInfo(project)
-          ServerManagerCore.clean(server) match {
+          ServerManagerCore.clean(server.projectName) match {
             case Full(x) =>
               self.reply(Response.CLEANED_UP)
             case Failure(x, _, _) =>
@@ -128,6 +175,10 @@ class ServerManager extends Actor {
           }
         case _ => projectNotFound(projectId)
       }
+    case Create(serverInfo) =>
+      self.reply("not implemented")
+    case Delete(serverInfo) =>
+      self.reply("not implemented")
     case _ => log.slf4j.info("error")
   }
   def projectNotFound(projectId: Long) = {
@@ -155,7 +206,7 @@ object ServerManagerRunner {
       Actor.remote.register(x.name, actorOf[ServerManager])
     } getOrElse {
       //TODO
-      print("couldn't get the config values for GitRepoManager.")
+      print("couldn't get the config values for ServerManager.")
     }
   }
 
