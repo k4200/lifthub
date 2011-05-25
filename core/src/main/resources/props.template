@@ -19,6 +19,7 @@ db.password=
 
 git.admin.email=lifthub@git.lifthub.net
 git.path.admin.pubkey=/home/lifthub/.ssh/id_rsa.pub
+git.url.root=git@git.lifthub.net
 
 #
 git.gitorious.rootdir=/opt/nginx/html/gitorious

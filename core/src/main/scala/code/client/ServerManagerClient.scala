@@ -39,7 +39,7 @@ object ServerManagerClient {
   def startServer(project: Project): Box[String] = {
     //Send a message to the remote server
     
-    server !! (Start(project.id.is), TIMEOUT) match {
+    server !! (Start(project.name.is), TIMEOUT) match {
       case Some(x) if x == Response.STARTED  =>
         Full("successfully started! " + project.id)
       case _ => Failure("failed to start a server for " + project.id)
@@ -47,7 +47,7 @@ object ServerManagerClient {
   }
 
   def stopServer(project: Project): Box[String] = {
-    server !! (Stop(project.id.is), TIMEOUT) match {
+    server !! (Stop(project.name.is), TIMEOUT) match {
       case Some(x) if x == Response.STOPPED  =>
         Full("successfully stopped! " + project.id)
       case _ => Failure("failed to stop the server for " + project.id)
@@ -55,7 +55,7 @@ object ServerManagerClient {
   }
 
   def clean(project: Project): Box[String] = {
-    server !! (Clean(project.id.is), TIMEOUT) match {
+    server !! (Clean(project.name.is), TIMEOUT) match {
       case Some(x) if x == Response.CLEANED_UP  =>
         Full("successfully cleaned up! " + project.id)
       case _ => Failure("failed to clean the server environment for " + project.id)

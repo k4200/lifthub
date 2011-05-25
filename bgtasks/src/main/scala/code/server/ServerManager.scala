@@ -14,6 +14,7 @@ import akka.dispatch.Dispatchers
 import java.util.concurrent.ThreadPoolExecutor._
 
 import net.lifthub.common.ActorConfig
+import net.lifthub.common.event.server.response._
 import net.lifthub.lib.ServerInfo
 import net.lifthub.lib.FileUtils
 import net.lifthub.model.Project
@@ -35,10 +36,12 @@ object ServerManagerCore {
   val executor = actorOf[JettyExecutor]
   executor.start
 
+  //TODO only jetty (stopPort)
   def start(projectName: String, stopPort: Int): Box[Any] = {
     convertResult(executor !! (Start(projectName, stopPort), TIMEOUT))
   }
 
+  //TODO only jetty (stopPort)
   def stop(projectName: String, stopPort: Int): Box[Any] = {
     convertResult(executor !! (Stop(projectName, stopPort), TIMEOUT))
   }
@@ -55,31 +58,36 @@ object ServerManagerCore {
       case Some(Full(x)) => Full(x)
       case Some(Failure(x,y,z)) => Failure(x,y,z)
       case Some(_) => Failure("This shouldn't happen.")
-      case None => Failure("timeout")
+      // This shouldn't happen either because the executor checks
+      // time after it started a server, and replies Failure if
+      // timeout occurs.
+      case None => Failure("timeout") 
     }
   }
 }
 
 
 /**
- * 
+ * TODO Move
  */
 object RuntimeEnvironmentHelper {
   import net.lifthub.lib.FileUtils._
 
-  def create(serverInfo: ServerInfo) = {
-    executeJailSetupProgram("create", serverInfo)
-    writeConfFile(serverInfo)
+  def create(projectName: String) = {
+    executeJailSetupProgram("create", projectName)
+    //writeConfFile(serverInfo)
   }
 
-  def delete(serverInfo: ServerInfo) = {
-    executeJailSetupProgram("delete", serverInfo)
+  def delete(projectName: String) = {
+    executeJailSetupProgram("delete", projectName)
   }
 
   /**
    * Creates a config file for the application server.
    * Currently, only jetty is supported.
-   * This must be called after the chroot is created.
+   * @deprecated
+   * Config file for the new arch doesn't contain project
+   * specific values.
    */
   def writeConfFile(serverInfo: ServerInfo): Boolean = {
     FileUtils.printToFile(serverInfo.confPath)(writer => {
@@ -91,17 +99,20 @@ object RuntimeEnvironmentHelper {
    * Executes the jail setup program with sudo.
    * @parameter cmd either "create" or "delete"
    */
-  def executeJailSetupProgram(cmd: String, serverInfo: ServerInfo) = {
+  def executeJailSetupProgram(cmd: String, projectName: String): Box[String] = {
     //TODO Test this. this may throw an exception.
     import org.apache.commons.exec._
     val cmdLine = new CommandLine("sudo")
     cmdLine.addArgument(ServerInfo.JAIL_SETUP_PROG)
     cmdLine.addArgument(cmd)
-    cmdLine.addArgument(serverInfo.projectName)
+    cmdLine.addArgument(projectName)
 
     val executor = new DefaultExecutor
-    //executor.setWorkingDirectory(new File(serverInfo.JAIL_PARENT_DIR)) //TODO
-    executor.execute(cmdLine)  // synchronous
+    //executor.setWorkingDirectory(new File(ServerInfo.JAIL_PARENT_DIR)) //TODO
+    tryo {
+      val st = executor.execute(cmdLine)  // synchronous
+      "%s %s succeeded. (result code: %d)".format(cmd, projectName, st)
+    }
   }
 }
 
@@ -128,63 +139,45 @@ class ServerManager extends Actor {
   import net.lifthub.common.event.server._
   import net.lifthub.model.Project._
   def receive = {
-    case Start(projectId) => 
-      Project.find(By(Project.id, projectId)) match {
-        case Full(project) =>
-          val server = ServerInfo(project)
-          ServerManagerCore.start(server.projectName, server.stopPort) match {
-            case Full(x) =>
-              //project.status(Status.Running)
-              //project.save
-              self.reply(Response.STARTED)
-              println("started " + projectId)
-            case Failure(x, _, _) =>
-              println(x)
-              self.reply(Response.FAILED)
-            case _ => unexpectedResult
-          }
-        case _ => projectNotFound(projectId)
+    case Start(projectName) => 
+      ServerManagerCore.start(projectName, 9000) match { //TODO hard-coded
+	case Full(x) =>
+	  //TODO Move to monitor program.
+          //project.status(Status.Running)
+          //project.save
+          self.reply(Response.STARTED)
+        case Failure(x, _, _) =>
+          println(x)
+          self.reply(Response.FAILED)
+        case _ => unexpectedResult
       }
-    case Stop(projectId) => 
-      Project.find(By(Project.id, projectId)) match {
-        case Full(project) =>
-          val server = ServerInfo(project)
-          ServerManagerCore.stop(server.projectName, server.stopPort) match {
-            case Full(x) =>
-              project.status(Status.Stopped)
-              project.save
-              self.reply(Response.STOPPED)
-            case Failure(x, _, _) =>
-              println(x)
-              self.reply(Response.FAILED)
-            case _ => unexpectedResult
-          }
-        case _ => projectNotFound(projectId)
+    case Stop(projectName) => 
+      ServerManagerCore.stop(projectName, 9000) match { //TODO hard-coded
+        case Full(x) =>
+          //project.status(Status.Stopped)
+          //project.save
+          self.reply(Response.STOPPED)
+        case Failure(x, _, _) =>
+          println(x)
+          self.reply(Response.FAILED)
+        case _ => unexpectedResult
       }
-    case Clean(projectId) => 
-      Project.find(By(Project.id, projectId)) match {
-        case Full(project) =>
-          val server = ServerInfo(project)
-          ServerManagerCore.clean(server.projectName) match {
-            case Full(x) =>
-              self.reply(Response.CLEANED_UP)
-            case Failure(x, _, _) =>
-              println(x)
-              self.reply(Response.FAILED)
-            case _ => unexpectedResult
-          }
-        case _ => projectNotFound(projectId)
+    case Clean(projectName) => 
+      ServerManagerCore.clean(projectName) match {
+        case Full(x) =>
+          self.reply(Response.CLEANED_UP)
+        case Failure(x, _, _) =>
+          println(x)
+          self.reply(Response.FAILED)
+        case _ => unexpectedResult
       }
     case Create(serverInfo) =>
-      self.reply("not implemented")
+      self.reply(ResCreate(
+	RuntimeEnvironmentHelper.create(serverInfo.projectName)))
     case Delete(serverInfo) =>
-      self.reply("not implemented")
-    case _ => log.slf4j.info("error")
-  }
-  def projectNotFound(projectId: Long) = {
-    //TODO ERROR  
-    self.reply(Response.FAILED)
-    println("failed to start " + projectId)
+      self.reply(ResDelete(
+	RuntimeEnvironmentHelper.delete(serverInfo.projectName)))
+    case _ => log.slf4j.info("unknown message")
   }
   def unexpectedResult = {
     println("unknown error...")

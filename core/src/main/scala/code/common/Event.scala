@@ -18,16 +18,16 @@ case class Create(serverInfo: ServerInfo) extends ServerEvent
 /**
  * Stops the server of the project of the given ID.
  */
-case class Delete(projectId: Long) extends ServerEvent
+case class Delete(serverInfo: ServerInfo) extends ServerEvent
 
 /**
  * Starts the server of the project of the given ID.
  */
-case class Start(projectId: Long) extends ServerEvent
+case class Start(projectName: String) extends ServerEvent
 /**
  * Stops the server of the project of the given ID.
  */
-case class Stop(projectId: Long) extends ServerEvent
+case class Stop(projectName: String) extends ServerEvent
 
 
 /**
@@ -35,7 +35,7 @@ case class Stop(projectId: Long) extends ServerEvent
  * and cleans the runtime environment.
  * TODO Shouldn't this be here?
  */
-case class Clean(projectId: Long) extends ServerEvent
+case class Clean(projectName: String) extends ServerEvent
 
 
 
