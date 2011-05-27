@@ -80,7 +80,8 @@ object ServerInfo {
 }
 
 // ------------------------------------------------
-case class NginxConf(projectName: String, port: Int) {
+case class NginxConf(projectName: String, ipAddr: String, port: Int) {
+  //TODO hard-coded
   val confPath = "/home/lifthub/nginx/conf.d/%s.conf".format(projectName)
   val logPath = "/home/lifthub/nginx/logs/%s.access.log".format(projectName)
 
@@ -90,26 +91,34 @@ case class NginxConf(projectName: String, port: Int) {
     })
   }
 
+  //TODO hard-coded
   def confString: String = {
     """    server {
       |        server_name %s.lifthub.net;
       |        access_log %s main;
       |        location / {
-      |            proxy_pass   http://127.0.0.1:%d/;
+      |            proxy_pass   http://%s:%d/;
       |        }
       |    }
       |"""
-      .stripMargin.format(projectName, logPath, port)
+      .stripMargin.format(projectName, logPath, ipAddr, port)
   }
 }
 object NginxConf {
   def apply(project: Project): NginxConf = {
-    this(project.name, project.port.is)
+    this(project.name, portToIpAddr(project.port.is), 8080)
+  }
+  def apply(projectName: String, port: Int): NginxConf = {
+    this(projectName, portToIpAddr(port), 8080)
   }
   def remove(project: Project): Boolean = {
-    val nginxConf = NginxConf(project.name, 0)
+    val nginxConf = NginxConf(project.name, "", 0)
     new java.io.File(nginxConf.confPath).delete &&
     new java.io.File(nginxConf.logPath).delete
+  }
+  def portToIpAddr(port: Int): String = {
+    val portHex = "%04x".format(port)
+    "127.0." + portHex.substring(0,2) + "." + portHex.substring(2)
   }
 }
 

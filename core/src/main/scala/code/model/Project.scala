@@ -118,6 +118,7 @@ with AggregateFunctions[Project]
   }
 
   override def afterCreate = List(project =>  {
+    import net.lifthub.client.ServerManagerClient
     (for(dbInfo <-project.database.obj;
     user <- User.find(By(User.id, project.userId)))
     yield {
@@ -126,8 +127,10 @@ with AggregateFunctions[Project]
       ProjectHelper.createProps(projectInfo, dbInfo)
       ProjectHelper.commitAndPushProject(projectInfo)
 
+      ServerManagerClient.create(this)
+
       // Copy the jail template and create a config file for jetty.
-      //TODO Move 
+      // It'll be done by flavour, so not neccesary anymore.
       //val serverInfo = ServerInfo(project)
       //serverInfo.setupNewServer
 
@@ -230,6 +233,8 @@ with UserEditableKeyedMapper[Long, Project]
   /**
    * Port number on which the server (currently jetty) runs.
    * 9000-9999 are used for now.
+   * Now, it's used to generate IP address.
+   * TODO should retire this.
    */
   object port extends MappedInt(this) {
     /**

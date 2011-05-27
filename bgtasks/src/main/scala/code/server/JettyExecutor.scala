@@ -35,7 +35,7 @@ class JettyExecutor extends Actor {
     case Start(projectName, stopPort) =>
       import scala.util.control.Exception.allCatch
       val cmd = List("sudo", COMMAND, "start", projectName, stopPort.toString)
-      self.reply(ResStart(
+      self.reply(
 	allCatch opt {
 	  killAll(projectName)
           execute(cmd)
@@ -43,19 +43,19 @@ class JettyExecutor extends Actor {
 	  case Some(_) => checkProcess(projectName)
 	  case None => Failure("Failed")
 	}
-      ))
+      )
     case Stop(projectName, stopPort) =>
       val cmd = List(COMMAND, "stop", projectName, stopPort.toString)
-      self.reply(ResStop(tryo {
+      self.reply(tryo {
         execute(cmd)
 	"Succeeded to stop %s.".format(projectName)
-      }))
+      })
     case Clean(projectName) =>
       val cmd = List("sudo", COMMAND, "clean", projectName)
-      self.reply(ResClean(tryo {
+      self.reply(tryo {
         execute(cmd)
 	"Succeeded to clean up %s.".format(projectName)
-      }))
+      })
   }
 
   /**
