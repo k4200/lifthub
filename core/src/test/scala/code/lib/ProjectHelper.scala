@@ -19,7 +19,7 @@ import bootstrap.liftweb.Boot
 
 object ServerInfoSpec extends Specification {
   "ServerInfo" should {
-    val si = ServerInfo("foo", 9000, "6")
+    val si = ServerInfo("foo", "127.0.0.100", 9000, "6")
     "contain correct paths." in {
       si.deployDirPath mustEqual "/home/lifthubuser/chroot/foo/home/lifthubuser/servers/jetty-6/userwebapps/foo"
       si.confPath mustEqual "/home/lifthubuser/chroot/foo/home/lifthubuser/servers/jetty-6/etc/lifthub/foo.xml"

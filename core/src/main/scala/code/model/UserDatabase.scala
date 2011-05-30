@@ -28,6 +28,12 @@ with UserEditableCRUDify[Long, UserDatabase] {
     create.name(project.name).databaseType(dbType).username(project.name).password(plainPassword)
   }
 
+  // def createFromName(name: String): UserDatabase = {
+  //   val plainPassword = RandomStringUtils.randomAlphanumeric(8)
+  //   val dbType = DEFAULT_DBTYPE
+  //   create.name(name).databaseType(dbType).username(name).password(plainPassword)
+  // }
+
   override def afterCreate = List(userDatabase =>  {
     val dbHelper = DbHelper.get(userDatabase.databaseType.is)
     dbHelper.addDatabase(userDatabase)
