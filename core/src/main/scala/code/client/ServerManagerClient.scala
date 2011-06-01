@@ -87,11 +87,12 @@ object ServerManagerClient {
     val boot = new Boot
     boot.boot
 
-    val project = Project.find(By(Project.id, 1)).get
+    //val project = Project.find(By(Project.id, 1)).get
+    val project = Project.create.name("bar").port(9001)
     println("ServerManagerClient#main")
-    startServer(project) match {
+    create(project) match {
       case Full(x) => println(x)
-      case _ => println("failed")
+      case x => println(x)
     }
   }
 }

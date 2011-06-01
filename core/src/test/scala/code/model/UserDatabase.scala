@@ -4,6 +4,8 @@ package model {
 import net.liftweb.common._
 
 import org.specs._
+// import org.specs.mock.Mockito
+// import org.mockito.Matchers._  // to use matchers like anyInt()
 
 import bootstrap.liftweb.Boot
 
@@ -45,6 +47,11 @@ object UserDatabaseSpec extends Specification {
         case _ => //fail
       }
     }
+
+    // "delete a database" in {
+    //   val db = UserDatabase.create.id(1).name("foo")
+    //   db.dropDatabase
+    // }
   }
 
 
