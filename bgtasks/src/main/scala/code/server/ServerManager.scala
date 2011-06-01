@@ -83,12 +83,12 @@ object ServerManagerCore {
 object RuntimeEnvironmentHelper {
   import net.lifthub.lib.FileUtils._
 
-  def create(projectName: String, port: Int): Box[String] = {
+  def create(projectName: String, ipAddr: String): Box[String] = {
     import net.lifthub.lib.NginxConf
     //writeConfFile(serverInfo)
-    val nginxConf = NginxConf(projectName, port)
+    val nginxConf = NginxConf(projectName, ipAddr)
     if (nginxConf.writeToFile) {
-      executeJailSetupProgram("create", projectName, port.toString)
+      executeJailSetupProgram("create", projectName, ipAddr)
     } else {
       Failure("Failed to write an nginx conf file for project " + projectName)
     }
@@ -166,9 +166,9 @@ class ServerManager extends Actor {
     case Clean(projectName) => 
       self.reply(ResClean(
 	ServerManagerCore.clean(projectName)))
-    case Create(projectName, port) =>
+    case Create(projectName, ipAddr) =>
       self.reply(ResCreate(
-	RuntimeEnvironmentHelper.create(projectName, port)))
+	RuntimeEnvironmentHelper.create(projectName, ipAddr)))
     case Delete(projectName) =>
       self.reply(ResDelete(
 	RuntimeEnvironmentHelper.delete(projectName)))

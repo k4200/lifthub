@@ -250,6 +250,11 @@ with UserEditableKeyedMapper[Long, Project]
     )
   }
 
+  def ipAddr: String = {
+    val portHex = "%04x".format(port)
+    "127.0." + portHex.substring(0,2) + "." + portHex.substring(2)
+  }
+
   /**
    * Port number on which the server (currently jetty) runs.
    * 9000-9999 are used for now.

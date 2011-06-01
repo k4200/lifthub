@@ -26,7 +26,7 @@ object ServerManagerClient {
 
   // ---------------- actions
   def create(project: Project): Box[String] = {
-    server !! (Create(project.name.is, project.port.is), TIMEOUT) match {
+    server !! (Create(project.name.is, project.ipAddr), TIMEOUT) match {
       case Some(x) => x match {
         case ResCreate(box) => box
         case y => println(y); unknownResponse

@@ -14,7 +14,7 @@ sealed trait ServerEvent
 /**
  * Creates an environment.
  */
-case class Create(projectName: String, port: Int) extends ServerEvent
+case class Create(projectName: String, ipAddr: String) extends ServerEvent
 /**
  * Stops the server of the project of the given ID.
  */
