@@ -81,7 +81,7 @@ object GitoriousHelper {
    */
   def removeSshKey(gitoriousSshKeyId: Int): Box[Int] = {
     val args = List(gitoriousSshKeyId.toString)
-    executeScript("remove_key", args)
+    executeScript("delete_key", args)
   }
 
   /**
