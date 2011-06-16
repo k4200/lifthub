@@ -64,8 +64,27 @@ object GitRepoManagerClient {
     }
   }
 
+
+  // def addAdminSshKey(user: User): Box[Int] = {
+  //   import net.liftweb.util._
+  //   // Get admin SSH key.
+  //   //TODO ok here?
+  //   val adminSshKeyPath = Props.get("git.path.admin.pubkey") openOr "/home/lifthub/.ssh/id_rsa.pub"
+  //   val adminSshKey = scala.io.Source.fromFile(adminSshKeyPath).mkString
+
+  //   //Send a message to the remote server
+  //   server !! (AddSshKey(user.gitoriousUserId.is, adminSshKey), TIMEOUT) match {
+  //     case Some(x) => x match {
+  //       case ResAddSshKey(box) => box
+  //       case y => println(y); unknownResponse
+  //     }
+  //     case None => timeout
+  //   }
+  // }
+
   def removeSshKey(user: User): Box[Int] = {
-    server !! (RemoveSshKey(user.gitoriousUserId.is), TIMEOUT) match {
+    //server !! (RemoveSshKey(user.gitoriousUserId.is), TIMEOUT) match {
+    server !! (RemoveSshKey(user.gitoriousSshKeyId.is), TIMEOUT) match {
       case Some(x) => x match {
         case ResRemoveSshKey(box) => box
         case _ => unknowResponse

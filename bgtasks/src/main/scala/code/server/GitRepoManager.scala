@@ -58,8 +58,8 @@ class GitRepoManager extends Actor {
     case AddSshKey(gitoriousUserId, sshKey) =>
       val res = GitoriousHelper.addSshKey(gitoriousUserId, sshKey)
       self.reply(ResAddSshKey(res))
-    case RemoveSshKey(gitoriousUserId) =>
-      val res = GitoriousHelper.removeSshKey(gitoriousUserId)
+    case RemoveSshKey(gitoriousSshKeyId) =>
+      val res = GitoriousHelper.removeSshKey(gitoriousSshKeyId)
       self.reply(ResRemoveSshKey(res))
     case _ => log.slf4j.error("Not implemented yet.")
   }
