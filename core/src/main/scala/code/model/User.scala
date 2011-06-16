@@ -57,6 +57,9 @@ object User extends User with MetaMegaProtoUser[User] {
     def registerSshKeyIfChanged(user: User) = {
       //If the key is different from the current one.
       if (user.sshKey.is.length > 0 && user.sshKey.dirty_?) {
+        if (user.gitoriousSshKeyId > 0) {
+          user.removeSshKey
+        }
 	println("new ssh key:" + user.sshKey.is)
 	user.registerSshKey
       } else {
@@ -236,22 +239,34 @@ class User extends MegaProtoUser[User] {
     override def dbDisplay_? = false
   }
 
+  object gitoriousSshKeyId extends MappedInt(this) {
+    override def dbColumnName = "gitorious_ssh_key_id"
+    override def dbDisplay_? = false
+  }
+
   /**
    *
    */
   def registerSshKey: Unit = {
-    //GitosisHelper.createSshKey(this)
-    //GitosisHelper.gitAddSshKey(this)
-    //GitosisHelper.commitAndPush("Registered a new ssh key of the user " + id)
-
-    //GitRepoManagerClient.removeSshKey(this)
     GitRepoManagerClient.addSshKey(this) match {
-      case Full(v) => println("ssh_key id = " + v)
+      case Full(v) =>
+        println("ssh_key id = " + v)
+        gitoriousSshKeyId(v)
       case Empty => println ("empty??")
       case Failure(x, _, _) => println ("Failure: '" + x + "'")
     }
   }
 
+  def removeSshKey: Unit = {
+    GitRepoManagerClient.removeSshKey(this) match {
+      case Full(v) =>
+        gitoriousSshKeyId(v)
+      case Empty => println ("empty??")
+      case Failure(x, _, _) => println ("Failure: '" + x + "'")
+    }
+  }
+
+  //TODO implement
   def changeGitoriousPassword: Unit = {
     //GitRepoManagerClient.addSshKey(this) match {
     //}

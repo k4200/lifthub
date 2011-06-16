@@ -78,9 +78,17 @@ object GitoriousHelper {
   }
 
   /**
+   * 
+   */
+  def removeSshKey(gitoriousSshKeyId: Int): Box[Int] = {
+    val args = List(gitoriousSshKeyId.toString)
+    executeScript("remove_key", args)
+  }
+
+  /**
    * Removes ALL the keys associated with the given user.
    */
-  def removeSshKey(gitoriousUserId: Int): Box[Int] = {
+  def removeSshKeysOfUser(gitoriousUserId: Int): Box[Int] = {
     val args = List(gitoriousUserId.toString)
     executeScript("remove_keys_by_user", args)
   }
