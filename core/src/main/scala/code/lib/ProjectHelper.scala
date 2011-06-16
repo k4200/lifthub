@@ -109,7 +109,10 @@ object NginxConf {
     this(project.name, project.ipAddr)
   }
   def remove(project: Project): Boolean = {
-    val nginxConf = NginxConf(project.name, "", 0)
+    remove(project.name)
+  }
+  def remove(projectName: String): Boolean = {
+    val nginxConf = NginxConf(projectName, "", 0)
     new java.io.File(nginxConf.confPath).delete &&
     new java.io.File(nginxConf.logPath).delete
   }
@@ -284,12 +287,10 @@ object ProjectHelper {
    * The changes need to be committed by using
    * <code>commitAndPushProject</code>.
    */
-  def copyTemplate(projectInfo: ProjectInfo): Boolean = {
-    try {
+  def copyTemplate(projectInfo: ProjectInfo): Box[String] = {
+    tryo {
       CommonsFileUtils.copyDirectory(projectInfo.templatePath, projectInfo.path)
-      true
-    } catch {
-      case e: java.io.IOException => false
+      "Copy template to %s succeeded.".format(projectInfo.path)
     }
   }
 
@@ -299,7 +300,7 @@ object ProjectHelper {
    * It actually does init, commit and push.
    */
   def commitAndPushProject(projectInfo: ProjectInfo,
-                           dryRun: Boolean = false): Boolean = {
+                           dryRun: Boolean = false): Box[String] = {
     val builder = new FileRepositoryBuilder()
     val projectRepo = 
       builder.setGitDir(projectInfo.path + "/" + Constants.DOT_GIT)
@@ -327,12 +328,9 @@ object ProjectHelper {
       git.push().setRefSpecs(refSpec).setDryRun(dryRun).setRemote(projectInfo.gitRepoRemote).call()
     } catch {
       case e: Exception  =>
-	//TODO
-        e.printStackTrace
-        println(e.getCause)
-        return false
+        return Failure("Failed to push?", Full(e), Empty)
     }
-    true
+    Full("succeeded to commit and push.")
   }
 
   //TODO Write test cases.
@@ -371,12 +369,14 @@ object ProjectHelper {
   /**
    * Creates a properties file for db connection
    */
-  def createProps(projectInfo: ProjectInfo, dbInfo: UserDatabase): Boolean = {
+  def createProps(projectInfo: ProjectInfo, dbInfo: UserDatabase): Box[String] = {
     val propsFile = new File(projectInfo.propsPath)
     FileUtils.printToFile(propsFile)(writer => {
       writer.write(generatePropsString(dbInfo))
-    })
-    true
+    }) match {
+      case true => Full("Succeded to create a prop.")
+      case false => Failure("Failed to create a prop.")
+    }
   }
 
   /**

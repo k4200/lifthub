@@ -35,7 +35,13 @@ with UserEditableCRUDify[Long, UserDatabase] {
   // }
 
   override def afterCreate = List(userDatabase =>  {
-    userDatabase.addDatabase
+    //TODO ugly... 
+    userDatabase.addDatabase match {
+      case Failure(msg, box, _) =>
+        box.map(t => throw t)
+      case _ =>
+        //
+    }
   })
 
   override def afterDelete = List(userDatabase =>  {

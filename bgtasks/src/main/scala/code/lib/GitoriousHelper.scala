@@ -19,6 +19,7 @@ object GitoriousHelper {
   val LOGIN_NAME_PREFIX = "lifthub-"
 
   val rootDir = Props.get("git.gitorious.rootdir") openOr "/opt/nginx/html/gitorious"
+  //TODO not here?
   val adminSshKeyPath = Props.get("git.path.admin.pubkey") openOr "/home/lifthub/.ssh/id_rsa.pub"
 
   /**

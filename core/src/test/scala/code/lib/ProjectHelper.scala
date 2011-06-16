@@ -51,7 +51,7 @@ object ProjectHelperSpec extends Specification {
 
   // -------------
   "NginxConf" should {
-    val nginxConf = NginxConf("foo", 9000)
+    val nginxConf = NginxConf("foo", "127.0.1.1", 9000)
     "contain correct paths." in {
       nginxConf.confPath mustEqual "/home/lifthub/nginx/conf.d/foo.conf"
       nginxConf.logPath mustEqual "/home/lifthub/nginx/logs/foo.access.log"
@@ -67,7 +67,7 @@ object ProjectHelperSpec extends Specification {
         server_name foo.lifthub.net;
         access_log /home/lifthub/nginx/logs/foo.access.log main;
         location / {
-            proxy_pass   http://127.0.0.1:9000/;
+            proxy_pass   http://127.0.1.1:9000/;
         }
     }
 """
@@ -84,11 +84,11 @@ object ProjectHelperSpec extends Specification {
       pi.projectTemplate.getSingleton mustBe ProjectTemplate
     }
     "contain correct paths" in {
-      pi.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_basic"
+      pi.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.3_sbt/lift_basic"
       pi.path mustEqual "/home/lifthub/userprojects/foo"
-      pi.gitRepoRemote mustEqual "gitosis@lifthub.net:foo.git"
+      pi.gitRepoRemote mustEqual "gitorious@git.lifthub.net:foo/foo.git"
 
-      pi.propsPath mustEqual "/home/lifthub/userprojects/foo/src/main/resources/props/production.props"
+      pi.propsPath mustEqual "/home/lifthub/userprojects/foo/src/main/resources/props/production.default.props"
       pi.warPath mustEqual "/home/lifthub/userprojects/foo/target/scala_2.8.1/lift-sbt-template_2.8.1-0.1.war"
 
     }
@@ -96,7 +96,7 @@ object ProjectHelperSpec extends Specification {
       val project = Project.create
       project.template(pt)
       val pi2 = ProjectInfo(project)
-      pi2.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.2_sbt/lift_basic"
+      pi2.templatePath mustEqual "/home/lifthub/projecttemplates/lift_2.3_sbt/lift_basic"
     }
 
   }
@@ -124,27 +124,40 @@ object ProjectHelperSpec extends Specification {
   // -------------
   // test cases that have side effects.
   "ProjectHelper" should {
+    import java.io.File
+    val pt = ProjectTemplate.find(By(ProjectTemplate.id, 1)).get
+    val pi = ProjectInfo("foo", pt)
+
     "copy template" in {
-      //ProjectHelper.copyTemplate(pi) mustBe true
-      true mustBe true
+      ProjectHelper.copyTemplate(pi) must haveClass[Full[String]]
+      //true mustBe true
     }
-    "create a props file" in {
-      val dbInfo = UserDatabase.create
-      dbInfo.name.set("foo")
-      dbInfo.databaseType.set(DbType.MySql)
-      dbInfo.username.set("foo")
-      dbInfo.hostname.set("localhost")
-      dbInfo.password.set("pass")
+    "generate a props string" in {
+      val dbInfo = UserDatabase.create.name("foo").databaseType(DbType.MySql)
+        .username("foo").hostname("localhost").password("pass")
       ProjectHelper.generatePropsString(dbInfo) mustEqual
 """db.driver=com.mysql.jdbc.Driver
 db.url=jdbc:mysql://localhost/foo
 db.user=foo
 db.password=pass"""
     }
+    "create a props file" in {
+      val dbInfo = UserDatabase.create.name("foo").databaseType(DbType.MySql)
+        .username("foo").hostname("localhost").password("pass")
+      ProjectHelper.createProps(pi, dbInfo)
+      val file = new File(pi.propsPath)
+      file.exists mustBe true
+    }
     "add a project to git" in {
-      //TODO can be tested after gitosis.conf and the key have been committed.
       //ProjectHelper.commitAndPushProject(pi) mustBe true
       true mustBe true
+    }
+    doLast {
+      import scala.util.control.Exception._
+      import org.apache.commons.io.{FileUtils => CommonsFileUtils}
+      allCatch {
+        CommonsFileUtils.deleteDirectory(new File("/home/lifthub/userprojects/foo/"))
+      }
     }
   }
   // -------------
@@ -158,7 +171,7 @@ db.password=pass"""
 
       (for {
         _ <- tryo{DB.runUpdate("truncate table project_templates", Nil)} ?~ "truncte failed."
-        _ <- tryo{DB.runUpdate("insert into project_templates (id, name,path,lift_version)values(1, 'Lift 2.2 Basic', 'lift_2.2_sbt/lift_basic', '2.2')", Nil)} ?~ "insert1 failed."
+        _ <- tryo{DB.runUpdate("insert into project_templates (id, name,path,lift_version)values(1, 'Lift 2.3 Basic', 'lift_2.3_sbt/lift_basic', '2.3')", Nil)} ?~ "insert1 failed."
       } yield {
         println("ProjectHelper.Initializer.addRecords succeeded.")
       }) match {

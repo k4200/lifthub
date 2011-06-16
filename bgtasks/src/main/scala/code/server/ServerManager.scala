@@ -59,7 +59,6 @@ object ServerManagerCore {
   /**
    * Converts results from the executor to Box.
    */
-  //def convertResult(result: Option[Any]): Box[Any] = {
   def convertResult(result: Option[Any]): Box[String] = {
     result match {
       case Some(Full(x)) => x match {
@@ -82,9 +81,9 @@ object ServerManagerCore {
  */
 object RuntimeEnvironmentHelper {
   import net.lifthub.lib.FileUtils._
+  import net.lifthub.lib.NginxConf
 
   def create(projectName: String, ipAddr: String): Box[String] = {
-    import net.lifthub.lib.NginxConf
     //writeConfFile(serverInfo)
     val nginxConf = NginxConf(projectName, ipAddr)
     if (nginxConf.writeToFile) {
@@ -95,6 +94,7 @@ object RuntimeEnvironmentHelper {
   }
 
   def delete(projectName: String): Box[String] = {
+    NginxConf.remove(projectName)
     executeJailSetupProgram("delete", projectName)
   }
 
