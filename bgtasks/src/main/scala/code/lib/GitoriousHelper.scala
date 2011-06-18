@@ -111,6 +111,7 @@ object GitoriousHelper {
    * Deletes a project and all the repositories belonging to it.
    */
   def removeProject(projectId: Int): Box[Int] = {
+    //TODO
     val args = List(projectId.toString)
     executeScript("delete_project", args)
   }

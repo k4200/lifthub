@@ -264,11 +264,6 @@ object ProjectHelper {
     updateWorkspace(project)
   }
 
-  def createProject(projectInfo: ProjectInfo, user: User) = {
-    //addUserToGitosis(projectInfo, user)
-    copyTemplate(projectInfo)
-  }
-
   def deleteProject(projectInfo: ProjectInfo) = {
     CommonsFileUtils.deleteDirectory(projectInfo.path)
   }

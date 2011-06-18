@@ -143,34 +143,14 @@ with AggregateFunctions[Project]
 
   //
   override def afterCreate = List(project =>  {
-    import net.lifthub.client.ServerManagerClient
     val projectInfo = ProjectInfo(project)
 
     (for(dbInfo <- project.database.obj;
          user <- User.find(By(User.id, project.userId)))
     yield {
-      // if (project.gitoriousProjectId.is == 0) {
-        for {
-          // Create a git repo.
-          id <- GitRepoManagerClient.addProject(user, project);
-          _ <- tryo {
-            project.gitoriousProjectId(id)
-            project.save
-          }
-          _ <- addProjectToRepo(projectInfo, dbInfo)
-
-          // Create a runtime environment
-          //Testing
-          //ServerManagerClient.create(this)
-        }
-        yield {
-          "afterCreate succeded."
-        }
-      // } else {
-      //   println("Is this block ever executed?")
-      // }
-
-
+      //Create a runtime environment
+      //Testing
+      //ServerManagerClient.create(this)
 
       // Copy the jail template and create a config file for jetty.
       // It'll be done by flavour, so not neccesary anymore.
@@ -192,17 +172,36 @@ with AggregateFunctions[Project]
   }
 
   // afterSave is called after 'afterCreate' or 'afterUpdate'.
-  override def afterSave = List(project => {
+  override def afterSave = List(project =>  {
+    import net.lifthub.client.ServerManagerClient
+    val projectInfo = ProjectInfo(project)
+
     // If there's no gitorious project yet, create one.
     if (project.gitoriousProjectId.is == 0) {
-      for(user <- User.find(By(User.id, project.userId));
-	  id <- GitRepoManagerClient.addProject(user, project))
+      (for {
+        dbInfo <- project.database.obj;
+        user <- User.find(By(User.id, project.userId))
+
+        // Create a git repo.
+        id <- GitRepoManagerClient.addProject(user, project);
+        _ <- tryo {
+          project.gitoriousProjectId(id)
+          project.save
+        }
+        // Add a project to the repo that has just been created.
+        _ <- addProjectToRepo(projectInfo, dbInfo)
+      }
       yield {
-        project.gitoriousProjectId(id)
-        project.save
+        "afterCreate succeded."
+      }) match {
+        case Failure(msg, box, _) =>
+          println(msg)
+          box.map(t => t.printStackTrace)
+        case _ => // do nothing
       }
     }
   })
+
 
   override def afterDelete = List(project => {
     println("afterDelete") //Debug
@@ -224,7 +223,7 @@ with AggregateFunctions[Project]
     }
 
     // Remove the project from the git repo.
-    //GitRepoManagerClient.removeProject(project)
+    GitRepoManagerClient.removeProject(project)
 
 
     // Delete the server environment.

@@ -34,7 +34,7 @@ with UserEditableCRUDify[Long, UserDatabase] {
   //   create.name(name).databaseType(dbType).username(name).password(plainPassword)
   // }
 
-  override def afterCreate = List(userDatabase =>  {
+  override def beforeCreate = List(userDatabase =>  {
     //TODO ugly... 
     userDatabase.addDatabase match {
       case Failure(msg, box, _) =>
