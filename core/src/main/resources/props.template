@@ -18,7 +18,7 @@ db.password=
 #jail.path.confdir=/home/lifthubuser/etc
 
 git.admin.email=lifthub@git.lifthub.net
-git.path.admin.pubkey=/home/lifthub/.ssh/id_rsa.pub
+git.path.admin.pubkey=/home/gitrepomanager/lifthub-admin.pub
 git.url.root=git@git.lifthub.net
 
 #

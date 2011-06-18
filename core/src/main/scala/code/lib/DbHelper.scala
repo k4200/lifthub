@@ -47,8 +47,9 @@ abstract class DbHelper[T <: DriverType](driverType: T) {
     }
   }
 
-  def runUpdate(query: String): Box[Int] = {
-    tryo { DB.runUpdate(query, Nil, connectionIdentifier) }
+  def runUpdate(query: String): Int = {
+    println(query) //Debug
+    DB.runUpdate(query, Nil, connectionIdentifier)
   }
 
   def connectionIdentifier: ConnectionIdentifier
@@ -89,8 +90,9 @@ object MySqlHelper extends DbHelper[DriverType](MySqlDriver) {
                      .format(database.name, database.username, database.hostname))
         } match {
           case Right(_) =>
-            Box("Database %s added successfully".format(database.name))
+            Full("Database %s added successfully".format(database.name))
           case Left(t) =>
+            t.printStackTrace
             tryo { dropDatabase(database) }
             Failure("Failed to add database %s.".format(database.name),
                     Full(t), Empty)

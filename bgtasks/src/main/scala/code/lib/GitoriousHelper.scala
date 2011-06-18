@@ -19,6 +19,7 @@ object GitoriousHelper {
   val LOGIN_NAME_PREFIX = "lifthub-"
 
   val rootDir = Props.get("git.gitorious.rootdir") openOr "/opt/nginx/html/gitorious"
+  //TODO not here?
   val adminSshKeyPath = Props.get("git.path.admin.pubkey") openOr "/home/lifthub/.ssh/id_rsa.pub"
 
   /**
@@ -77,9 +78,17 @@ object GitoriousHelper {
   }
 
   /**
+   * 
+   */
+  def removeSshKey(gitoriousSshKeyId: Int): Box[Int] = {
+    val args = List(gitoriousSshKeyId.toString)
+    executeScript("remove_key", args)
+  }
+
+  /**
    * Removes ALL the keys associated with the given user.
    */
-  def removeSshKey(gitoriousUserId: Int): Box[Int] = {
+  def removeSshKeysOfUser(gitoriousUserId: Int): Box[Int] = {
     val args = List(gitoriousUserId.toString)
     executeScript("remove_keys_by_user", args)
   }
@@ -102,6 +111,7 @@ object GitoriousHelper {
    * Deletes a project and all the repositories belonging to it.
    */
   def removeProject(projectId: Int): Box[Int] = {
+    //TODO
     val args = List(projectId.toString)
     executeScript("delete_project", args)
   }

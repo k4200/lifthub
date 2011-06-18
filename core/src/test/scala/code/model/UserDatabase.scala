@@ -2,6 +2,8 @@ package net.lifthub {
 package model {
 
 import net.liftweb.common._
+import net.liftweb.mapper._
+import scala.util.control.Exception._
 
 import org.specs._
 // import org.specs.mock.Mockito
@@ -48,10 +50,33 @@ object UserDatabaseSpec extends Specification {
       }
     }
 
-    // "delete a database" in {
-    //   val db = UserDatabase.create.id(1).name("foo")
-    //   db.dropDatabase
-    // }
+    "create a database" in {
+      val db = UserDatabase.create.name("foo").username("foo").password("1p2a3s4s")
+      db.addDatabase must haveClass[Full[String]]
+    }
+
+    "delete a database" in {
+      val db = UserDatabase.find(1).get
+      db.dropDatabase
+    }
+
+  }
+
+
+  object Setup {
+    def addRecords() = {
+      val boot = new Boot
+      boot.boot
+
+      allCatch either {
+        DB.runUpdate("truncate table user_databases", Nil)
+      } match {
+        case Right(_) =>
+          //OK
+        case Left(x) => 
+          println(x)
+      }
+    }
   }
 
 
