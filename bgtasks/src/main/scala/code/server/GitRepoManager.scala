@@ -52,8 +52,8 @@ class GitRepoManager extends Actor {
     case AddProject(gitoriousUserId, projectName) =>
       val res = GitoriousHelper.addProject(gitoriousUserId, projectName)
       self.reply(ResAddProject(res))
-    case RemoveProject(projectId) =>
-      val res = GitoriousHelper.removeProject(projectId)
+    case RemoveProject(projectName) =>
+      val res = GitoriousHelper.removeProject(projectName)
       self.reply(ResRemoveProject(res))
     case AddSshKey(gitoriousUserId, sshKey) =>
       val res = GitoriousHelper.addSshKey(gitoriousUserId, sshKey)
