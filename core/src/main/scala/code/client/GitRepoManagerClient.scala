@@ -22,7 +22,7 @@ object GitRepoManagerClient {
   }
 
   val unknownResponse = Failure("Unknown response.")
-  val timeout = Failure("Time out")
+  val timeout = Failure("Timeout occurred. (" + TIMEOUT + ")")
 
 
   /**

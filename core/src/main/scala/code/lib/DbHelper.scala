@@ -87,8 +87,8 @@ object MySqlHelper extends DbHelper[DriverType](MySqlDriver) {
           //TODO it would be better to limit the source host, but too much hassle.
           runUpdate("CREATE USER '%s'@'%%' IDENTIFIED BY '%s'"
                      .format(database.username, password))
-          runUpdate("GRANT ALL on %s.* to '%s'@'%s'"
-                     .format(database.name, database.username, database.hostname))
+          runUpdate("GRANT ALL on %s.* to '%s'@'%%'"
+                     .format(database.name, database.username))
         } match {
           case Right(_) =>
             Full("Database %s added successfully".format(database.name))

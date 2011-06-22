@@ -151,8 +151,7 @@ with AggregateFunctions[Project]
          user <- User.find(By(User.id, project.userId)))
     yield {
       //Create a runtime environment
-      //Testing
-      //ServerManagerClient.create(this)
+      ServerManagerClient.create(project)
 
       // Copy the jail template and create a config file for jetty.
       // It'll be done by flavour, so not neccesary anymore.
@@ -225,8 +224,7 @@ with AggregateFunctions[Project]
     }
 
     // Delete the runtime environment.
-    //Test
-    //ServerManagerClient.delete(project)
+    ServerManagerClient.delete(project)
 
     // Delete the server environment.
     //val si = ServerInfo(project)
