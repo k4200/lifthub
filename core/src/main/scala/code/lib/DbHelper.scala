@@ -84,8 +84,9 @@ object MySqlHelper extends DbHelper[DriverType](MySqlDriver) {
       case Full(password) =>
         allCatch either {
           runUpdate("CREATE DATABASE " + database.name)
-          runUpdate("CREATE USER '%s'@'%s' IDENTIFIED BY '%s'"
-                     .format(database.username, database.hostname, password))
+          //TODO it would be better to limit the source host, but too much hassle.
+          runUpdate("CREATE USER '%s'@'%%' IDENTIFIED BY '%s'"
+                     .format(database.username, password))
           runUpdate("GRANT ALL on %s.* to '%s'@'%s'"
                      .format(database.name, database.username, database.hostname))
         } match {
@@ -110,7 +111,7 @@ object MySqlHelper extends DbHelper[DriverType](MySqlDriver) {
     }
     tryo {
       runUpdate("DROP DATABASE " + database.name)
-      runUpdate("DROP USER '%s'@'%s'".format(database.username, database.hostname))
+      runUpdate("DROP USER '%s'@'%%'".format(database.username))
       "Succeeded to drop database %s.".format(database.name)
     }
   }

@@ -17,6 +17,7 @@ import scala.xml.Text
 import net.lifthub.model._
 import net.lifthub.lib._
 import net.lifthub.client.GitRepoManagerClient
+import net.lifthub.client.ServerManagerClient
 
 object Project extends Project with LongKeyedMetaMapper[Project]
 with UserEditableCRUDify[Long, Project]
@@ -113,6 +114,7 @@ with AggregateFunctions[Project]
     project.port(getAvailablePort)
   }
 
+  //TODO This is called even when there were errors in precedent validations.
   private def createDatabaseIfNone(project: Project): List[FieldError] = {
     User.currentUser match {
       case Full(user) =>
@@ -222,13 +224,16 @@ with AggregateFunctions[Project]
       }
     }
 
-    // Remove the project from the git repo.
-    GitRepoManagerClient.removeProject(project)
-
+    // Delete the runtime environment.
+    //Test
+    //ServerManagerClient.delete(project)
 
     // Delete the server environment.
     //val si = ServerInfo(project)
     //si.deleteServer
+
+    // Remove the project from the git repo.
+    GitRepoManagerClient.removeProject(project)
 
     // Remove the project files.
     ProjectHelper.deleteProject(project.info)

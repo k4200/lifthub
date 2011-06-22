@@ -3,11 +3,13 @@ db.url=jdbc:mysql://localhost/lifthub
 db.user=lifthub
 db.password=
 
-#userdb.mysql.driver=com.mysql.jdbc.Driver
-#userdb.mysql.url=jdbc:mysql://localhost
-#userdb.mysql.user=root
-#userdb.mysql.password=
+userdb.mysql.driver=com.mysql.jdbc.Driver
+userdb.mysql.url=jdbc:mysql://ec2-nnn-nnn-nnn-nnn.compute-1.amazonaws.com
+userdb.mysql.user=root
+userdb.mysql.password=
+userdb.mysql.hostname.internal=domU-xx-xx-xx-xx-xx-CA.compute-1.internal
 
+#jailer.hostname.internal=ip-nnn-nnn-nnn-nnn.ec2.internal
 #jailer.path.bin.setup=/home/lifthub/sbin/setup-jail.sh
 #jailer.path.jailroot=/home/lifthubuser/chroot
 #jailer.path.templatedir=/home/lifthubuser/tmpl
