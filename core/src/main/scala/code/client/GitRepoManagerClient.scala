@@ -22,7 +22,7 @@ object GitRepoManagerClient {
   }
 
   val unknownResponse = Failure("Unknown response.")
-  val timeout = Failure("Time out")
+  val timeout = Failure("Timeout occurred. (" + TIMEOUT + ")")
 
 
   /**
@@ -104,7 +104,7 @@ object GitRepoManagerClient {
   }
 
   def removeProject(project: Project): Box[Int] = {
-    server !! (RemoveProject(project.gitoriousProjectId.is), TIMEOUT) match {
+    server !! (RemoveProject(project.name.is), TIMEOUT) match {
       case Some(x) => x match {
         case ResRemoveProject(box) => box
         case y => println(y); unknownResponse

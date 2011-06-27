@@ -53,6 +53,10 @@ case class ServerInfo(projectName: String, ipAddr: String, port: Int, version: S
 }
 
 object ServerInfo {
+  //Host names
+  val JAILER_HOST_EXTERNAL =
+    Props.get("jailer.hostname.external") openOr "ec2.lifthub.net"
+
   //Paths
   val JAIL_SETUP_PROG = Props.get("jailer.path.bin.setup") openOr
     "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
@@ -187,6 +191,9 @@ object SbtHelper {
 
   // This is not an sbt command.
   def deploy(project: Project): Box[String] = {
+    import net.schmizz.sshj.SSHClient
+    import net.schmizz.sshj.xfer.FileSystemFile
+
     //TODO Hot deploy.
     val pi = ProjectInfo(project)
     val si = ServerInfo(project)
@@ -194,9 +201,16 @@ object SbtHelper {
       return Failure("war file doesn't exist. Build first.")
     }
     tryo {
-      //TODO remote
-      CommonsFileUtils.copyFile(pi.warPath, si.deployDirPath + "/ROOT.war")
-      pi.warPath.delete
+      val ssh = new SSHClient()
+      ssh.loadKnownHosts()
+      ssh.connect(ServerInfo.JAILER_HOST_EXTERNAL)
+      ssh.authPublickey(System.getProperty("user.name")) //what is this?
+      ssh.useCompression()
+
+      ssh.newSCPFileTransfer().upload(
+        new FileSystemFile(pi.warPath), si.deployDirPath + "/ROOT.war");
+      //pi.warPath.delete
+      ssh.disconnect()
       Full("Project %s successfully deployed.".format(project.name))
     } openOr {
       Failure("Failed to deploy.")
