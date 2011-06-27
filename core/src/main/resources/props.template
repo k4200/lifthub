@@ -9,6 +9,7 @@ userdb.mysql.user=root
 userdb.mysql.password=
 userdb.mysql.hostname.internal=domU-xx-xx-xx-xx-xx-CA.compute-1.internal
 
+jailer.hostname.external=ec2.lifthub.net
 #jailer.hostname.internal=ip-nnn-nnn-nnn-nnn.ec2.internal
 #jailer.path.bin.setup=/home/lifthub/sbin/setup-jail.sh
 #jailer.path.jailroot=/home/lifthubuser/chroot
