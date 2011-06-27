@@ -5,7 +5,8 @@ import java.io.File
 import java.io.FileOutputStream
 
 import net.liftweb.common._
-import net.liftweb.util.Helpers._
+import net.liftweb.util._
+import Helpers._
 
 import akka.actor.Actor
 import akka.actor.Actor._
