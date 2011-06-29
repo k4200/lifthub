@@ -91,8 +91,8 @@ class JettyExecutor extends Actor {
    */
   def checkProcess(projectName: String): Box[String] = {
     def parseLog(projectName: String): Box[Boolean] = {
-      //val log = scala.io.Source.fromFile(serverInfo.executeLogPath).mkString
-      val log = scala.io.Source.fromFile(ServerInfo.JAIL_LOG_DIR).mkString
+      val serverInfo = ServerInfo(projectName)
+      val log = scala.io.Source.fromFile(serverInfo.executeLogPath).mkString
       if (log.contains(KEYWORD_FAILURE)) {
 	Full(false)
       } else if (log.contains(KEYWORD_SUCCESS)) {
