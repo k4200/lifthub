@@ -18,9 +18,9 @@ import internalevent.response._
 import net.lifthub.lib.ServerInfo
 
 class JettyExecutor extends Actor {
-  // This script uses chroot and calls the other script.
-  //val COMMAND = "jetty-run-lifthub-root.sh"
-  val COMMAND = "/home/lifthubuser/sbin/jetty-run-lifthub-root.sh"
+  // This script calls jexec and starts/stops the server.
+  val COMMAND = Props.get("jailer.path.bin.server") openOr 
+  "/home/lifthub/sbin/exec-server-in-jail.sh"
 
   val TIMEOUT = 30000
   val KEYWORD_SUCCESS = "INFO::Started"
@@ -34,7 +34,7 @@ class JettyExecutor extends Actor {
   def receive = {
     case Start(projectName, stopPort) =>
       import scala.util.control.Exception.allCatch
-      val cmd = List("sudo", COMMAND, "start", projectName, stopPort.toString)
+      val cmd = List("sudo", COMMAND, projectName, "start")
       self.reply(
 	allCatch opt {
 	  killAll(projectName)
@@ -45,13 +45,13 @@ class JettyExecutor extends Actor {
 	}
       )
     case Stop(projectName, stopPort) =>
-      val cmd = List(COMMAND, "stop", projectName, stopPort.toString)
+      val cmd = List("sudo", COMMAND, projectName, "stop")
       self.reply(tryo {
         execute(cmd)
 	"Succeeded to stop %s.".format(projectName)
       })
     case Clean(projectName) =>
-      val cmd = List("sudo", COMMAND, "clean", projectName)
+      val cmd = List("sudo", COMMAND, projectName, "clean")
       self.reply(tryo {
         execute(cmd)
 	"Succeeded to clean up %s.".format(projectName)
