@@ -22,7 +22,7 @@ import storage.file.{FileRepository, FileRepositoryBuilder}
 import transport.{Transport, RefSpec, RemoteConfig, URIish}
 
 
-case class ServerInfo(projectName: String, ipAddr: String, port: Int, version: String) {
+case class ServerInfo(projectName: String, version: String = "6") {
   import ServerInfo._
   val jailRootPath = JAIL_PARENT_DIR + "/" + projectName
 
@@ -36,19 +36,14 @@ case class ServerInfo(projectName: String, ipAddr: String, port: Int, version: S
   //TODO Move this cuz it is the same for all the projects.
   val templatePath = jailRootPath + JAILER_TEMPLATE_DIR + "/jetty.xml.tmpl"
   val logDirPath = jailRootPath + JAIL_LOG_DIR
-  val executeLogPath = logDirPath + "/" + projectName + "-execute.log"
-
-  //val pidFilePath = jailRootPath + basePath + "/logs/" + projectName + ".pid"
-  val stopPort = port + 1000 //TODO
+  val executeLogPath = logDirPath + "/server-exec.log"
 
   def confString: String = {
     import scala.io.Source
     val tmpl = Source.fromFile(templatePath)
     val portPattern = "#port#".r
     val namePattern = "#name#".r
-    namePattern.replaceAllIn(
-      portPattern.replaceAllIn(tmpl.mkString, port.toString),
-      projectName)
+    namePattern.replaceAllIn(tmpl.mkString, projectName)
   }
 }
 
@@ -78,8 +73,7 @@ object ServerInfo {
     "/home/lifthubuser/etc"
 
   def apply(project: Project): ServerInfo = {
-    //TODO dummy IP address
-    this(project.name, "127.0.0.200", project.port, "6")
+    this(project.name)
   }
 }
 
