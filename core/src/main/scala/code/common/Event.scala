@@ -4,19 +4,30 @@ package common.event.server {
 //import scala.reflect.BeanInfo
 //import akka.serialization.Serializable.ScalaJSON
 
+import net.lifthub.lib.ServerInfo
+
 /**
  * The parent of all the events that Server Manager handles.
  */
-sealed trait Event
+sealed trait ServerEvent
+
+/**
+ * Creates an environment.
+ */
+case class Create(projectName: String, ipAddr: String) extends ServerEvent
+/**
+ * Stops the server of the project of the given ID.
+ */
+case class Delete(projectName: String) extends ServerEvent
 
 /**
  * Starts the server of the project of the given ID.
  */
-case class Start(projectId: Long) extends Event
+case class Start(projectName: String) extends ServerEvent
 /**
  * Stops the server of the project of the given ID.
  */
-case class Stop(projectId: Long) extends Event
+case class Stop(projectName: String) extends ServerEvent
 
 
 /**
@@ -24,19 +35,8 @@ case class Stop(projectId: Long) extends Event
  * and cleans the runtime environment.
  * TODO Shouldn't this be here?
  */
-case class Clean(projectId: Long) extends Event
+case class Clean(projectName: String) extends ServerEvent
 
-
-
-/**
- * Responses from ServerManager to client
- */
-object Response {
-  val STOPPED = "Stopped"
-  val STARTED = "Started"
-  val CLEANED_UP = "Cleaned up"
-  val FAILED = "Failed"
-}
 
 
 

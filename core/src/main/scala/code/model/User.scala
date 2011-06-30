@@ -40,9 +40,9 @@ object User extends User with MetaMegaProtoUser[User] {
   // "noreply@192.168.0.10", which would be a problem.
   override def emailFrom = "noreply@lifthub.net"
 
-  // 
   override def afterSave = List(user => {
-    //
+    // Add a Gitorious one after creating the user.
+    // If it was in afterCreate, the same user would be created twice.
     if (user.gitoriousUserId.is == 0) {
       GitRepoManagerClient.addUser(user).map { id =>
         user.gitoriousUserId(id)

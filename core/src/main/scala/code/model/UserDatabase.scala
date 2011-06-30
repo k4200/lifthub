@@ -3,7 +3,8 @@ package model {
 
 
 import net.liftweb._
-import util.{FieldError,FieldIdentifier,StringValidators}
+import util._
+//import util.{FieldError,FieldIdentifier,StringValidators}
 import common._
 import mapper._
 import http.S
@@ -25,17 +26,29 @@ with UserEditableCRUDify[Long, UserDatabase] {
   def createFromProject(project: Project): UserDatabase = {
     val plainPassword = RandomStringUtils.randomAlphanumeric(8)
     val dbType = DEFAULT_DBTYPE
-    create.name(project.name).databaseType(dbType).username(project.name).password(plainPassword)
+    val hostname = Props.get("userdb.mysql.hostname.internal") openOr "localhost"
+    create.name(project.name).databaseType(dbType).hostname(hostname)
+    .username(project.name).password(plainPassword)
   }
 
-  override def afterCreate = List(userDatabase =>  {
-    val dbHelper = DbHelper.get(userDatabase.databaseType.is)
-    dbHelper.addDatabase(userDatabase)
+  // def createFromName(name: String): UserDatabase = {
+  //   val plainPassword = RandomStringUtils.randomAlphanumeric(8)
+  //   val dbType = DEFAULT_DBTYPE
+  //   create.name(name).databaseType(dbType).username(name).password(plainPassword)
+  // }
+
+  override def beforeCreate = List(userDatabase =>  {
+    //TODO ugly... 
+    userDatabase.addDatabase match {
+      case Failure(msg, box, _) =>
+        box.map(t => throw t)
+      case _ =>
+        //
+    }
   })
 
   override def afterDelete = List(userDatabase =>  {
-    val dbHelper = DbHelper.get(userDatabase.databaseType.is)
-    dbHelper.dropDatabase(userDatabase)
+    userDatabase.dropDatabase
   })
 
   override def fieldsForEditing = List(password)
@@ -118,7 +131,12 @@ with UserEditableKeyedMapper[Long, UserDatabase] {
   def plainPassword = _plainPassword
 
   //operations
-  def dropDatabase = {
+  def addDatabase: Box[String] = {
+    val dbHelper = DbHelper.get(databaseType)
+    dbHelper.addDatabase(this)
+  }
+
+  def dropDatabase: Box[String] = {
     val dbHelper = DbHelper.get(databaseType)
     dbHelper.dropDatabase(this)
   }

@@ -5,7 +5,8 @@ import java.io.File
 import java.io.FileOutputStream
 
 import net.liftweb.common._
-import net.liftweb.util.Helpers._
+import net.liftweb.util._
+import Helpers._
 
 import akka.actor.Actor
 import akka.actor.Actor._
@@ -13,13 +14,14 @@ import akka.actor.Actor._
 import org.apache.commons.exec._
 
 import internalevent._
+import internalevent.response._
 
 import net.lifthub.lib.ServerInfo
 
 class JettyExecutor extends Actor {
-  // This script uses chroot and calls the other script.
-  //val COMMAND = "jetty-run-lifthub-root.sh"
-  val COMMAND = "/home/lifthubuser/sbin/jetty-run-lifthub-root.sh"
+  // This script calls jexec and starts/stops the server.
+  val COMMAND = Props.get("jailer.path.bin.server") openOr 
+  "/home/lifthub/sbin/exec-server-in-jail.sh"
 
   val TIMEOUT = 30000
   val KEYWORD_SUCCESS = "INFO::Started"
@@ -28,38 +30,43 @@ class JettyExecutor extends Actor {
 
   /**
    * Replies a Box[String].
-   * This method blocks.
+   * This is a blocking operation.
    */
   def receive = {
-    case Start(serverInfo) =>
-      val cmd = List("sudo", COMMAND, "start", serverInfo.projectName, serverInfo.stopPort.toString)
+    case Start(projectName, stopPort) =>
+      import scala.util.control.Exception.allCatch
+      val cmd = List("sudo", COMMAND, projectName, "start")
+      self.reply(
+	allCatch opt {
+	  killAll(projectName)
+          execute(cmd)
+	} match {
+	  case Some(_) => checkProcess(projectName)
+	  case None => Failure("Failed")
+	}
+      )
+    case Stop(projectName, stopPort) =>
+      val cmd = List("sudo", COMMAND, projectName, "stop")
       self.reply(tryo {
-	killAll(serverInfo)
-        execute(serverInfo, cmd)
-        checkProcess(serverInfo)
+        execute(cmd)
+	"Succeeded to stop %s.".format(projectName)
       })
-    case Stop(serverInfo) =>
-      val cmd = List(COMMAND, "stop", serverInfo.projectName, serverInfo.stopPort.toString)
+    case Clean(projectName) =>
+      val cmd = List("sudo", COMMAND, projectName, "clean")
       self.reply(tryo {
-        execute(serverInfo, cmd)
-	Full("stopped")
-      })
-    case Clean(serverInfo) =>
-      val cmd = List("sudo", COMMAND, "clean", serverInfo.projectName)
-      self.reply(tryo {
-        execute(serverInfo, cmd)
-  	Full("cleand up")
+        execute(cmd)
+	"Succeeded to clean up %s.".format(projectName)
       })
   }
 
   /**
    * TODO Implement this.
    */
-  def kill(server: ServerInfo) = {
-    val args = List("kill", server.projectName)
+  def kill(projectName: String) = {
+    val args = List("kill", projectName)
   }
 
-  def execute(server: ServerInfo, cmd: List[String]) = {
+  def execute(cmd: List[String]) = {
     val cmdLine = new CommandLine(cmd.head)
     cmd.tail.foreach(cmdLine.addArgument _)
 
@@ -82,8 +89,9 @@ class JettyExecutor extends Actor {
   /**
    * Checks if the server has been started correctly.
    */
-  def checkProcess(serverInfo: ServerInfo): Box[String] = {
-    def parseLog(serverInfo: ServerInfo): Box[Boolean] = {
+  def checkProcess(projectName: String): Box[String] = {
+    def parseLog(projectName: String): Box[Boolean] = {
+      val serverInfo = ServerInfo(projectName)
       val log = scala.io.Source.fromFile(serverInfo.executeLogPath).mkString
       if (log.contains(KEYWORD_FAILURE)) {
 	Full(false)
@@ -98,17 +106,17 @@ class JettyExecutor extends Actor {
     while (true) {
       if (System.currentTimeMillis - start > TIMEOUT) {
 	//timeout occured.
-	kill(serverInfo)
+	kill(projectName)
         return  Failure("Timeout.")
       }
-      parseLog(serverInfo) match {
+      parseLog(projectName) match {
         case Full(true) =>
           return  Full("Server started.")
         case Full(false) =>
-          kill(serverInfo)
+          kill(projectName)
           return  Failure("An exception occured.")
         case Empty =>
-          println("still running")
+          println("still running") //Debug
         case _ =>
           return  Failure("Unknown error.")
       }
@@ -120,10 +128,10 @@ class JettyExecutor extends Actor {
   /**
    * Kills all the remaining processes associated with this server.
    */
-  def killAll(serverInfo: ServerInfo) = {
+  def killAll(projectName: String) = {
     //TODO Implement this.
     // For now, kill the process of the pid in the pid file. 
-    kill(serverInfo)
+    kill(projectName)
   }
 
 }

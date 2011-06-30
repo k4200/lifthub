@@ -14,7 +14,9 @@ import akka.dispatch.Dispatchers
 import java.util.concurrent.ThreadPoolExecutor._
 
 import net.lifthub.common.ActorConfig
+import net.lifthub.common.event.server.response._
 import net.lifthub.lib.ServerInfo
+import net.lifthub.lib.FileUtils
 import net.lifthub.model.Project
 
 //import org.apache.commons.exec._
@@ -30,40 +32,114 @@ object ServerManagerCore {
   import internalevent._
   val TIMEOUT = 60000
 
-  //TODO ok?
-  val executor = actorOf[JettyExecutor]
-  executor.start
+  val jettyExecutor = actorOf[JettyExecutor]
+  jettyExecutor.start
 
-  def start(server: ServerInfo): Box[Any] = {
-    convertResult(executor !! (Start(server), TIMEOUT))
+  def unknownResponse = {
+    Failure("unknown response...")
+  }
+  
+  //TODO only jetty (stopPort)
+  def start(projectName: String, stopPort: Int): Box[String] = {
+    val executor = jettyExecutor
+    convertResult(executor !! (Start(projectName, stopPort), TIMEOUT))
   }
 
-  def stop(server: ServerInfo): Box[Any] = {
-    convertResult(executor !! (Stop(server), TIMEOUT))
+  //TODO only jetty (stopPort)
+  def stop(projectName: String, stopPort: Int): Box[String] = {
+    val executor = jettyExecutor
+    convertResult(executor !! (Stop(projectName, stopPort), TIMEOUT))
   }
 
-  def clean(server: ServerInfo): Box[Any] = {
-    convertResult(executor !! (Clean(server), TIMEOUT))
+  def clean(projectName: String): Box[String] = {
+    val executor = jettyExecutor
+    convertResult(executor !! (Clean(projectName), TIMEOUT))
   }
 
   /**
    * Converts results from the executor to Box.
    */
-  def convertResult(result: Option[Any]): Box[Any] = {
+  def convertResult(result: Option[Any]): Box[String] = {
     result match {
-      case Some(Full(x)) => Full(x)
+      case Some(Full(x)) => x match {
+	case s: String => Full(s)
+	case _ => Failure("unknown result")
+      }
       case Some(Failure(x,y,z)) => Failure(x,y,z)
       case Some(_) => Failure("This shouldn't happen.")
-      case None => Failure("timeout")
+      // This shouldn't happen either because the executor checks
+      // time after it started a server, and replies Failure if
+      // timeout occurs.
+      case None => Failure("timeout") 
     }
   }
 }
+
+
+/**
+ * TODO Move
+ */
+object RuntimeEnvironmentHelper {
+  import net.lifthub.lib.FileUtils._
+  import net.lifthub.lib.NginxConf
+
+  def create(projectName: String, ipAddr: String): Box[String] = {
+    //writeConfFile(serverInfo)
+    val nginxConf = NginxConf(projectName, ipAddr)
+    if (nginxConf.writeToFile) {
+      executeJailSetupProgram("create", projectName, ipAddr)
+    } else {
+      Failure("Failed to write an nginx conf file for project " + projectName)
+    }
+  }
+
+  def delete(projectName: String): Box[String] = {
+    NginxConf.remove(projectName)
+    executeJailSetupProgram("delete", projectName)
+  }
+
+  /**
+   * Creates a config file for the application server.
+   * Currently, only jetty is supported.
+   * @deprecated
+   * Config file for the new arch doesn't contain project
+   * specific values.
+   */
+  def writeConfFile(serverInfo: ServerInfo): Boolean = {
+    FileUtils.printToFile(serverInfo.confPath)(writer => {
+      writer.write(serverInfo.confString)
+    })
+  }
+
+  /**
+   * Executes the jail setup program with sudo.
+   * @parameter cmd either "create" or "delete"
+   */
+  def executeJailSetupProgram(cmd: String, args: String*): Box[String] = {
+    //TODO Test this. this may throw an exception.
+    import org.apache.commons.exec._
+    val cmdLine = new CommandLine("sudo")
+    cmdLine.addArgument(ServerInfo.JAIL_SETUP_PROG)
+    cmdLine.addArgument(cmd)
+    args.foreach(cmdLine.addArgument(_))
+
+    val executor = new DefaultExecutor
+    //executor.setWorkingDirectory(new File(ServerInfo.JAIL_PARENT_DIR)) //TODO
+    tryo {
+      val st = executor.execute(cmdLine)  // synchronous
+      "%s jail %s succeeded. (result code: %d)".format(cmd, args(0), st)
+    }
+  }
+}
+
 
 /**
  * This actor runs as a service and listens on the port specified
  * in ActorConfig.
  */
 class ServerManager extends Actor {
+  val TIMEOUT = 90000 //TODO hard-coded
+
   // max 5 retries, within 5000 millis
   //self.faultHandler = OneForOneStrategy(List(classOf[Exception]), 5, 5000)
 
@@ -81,63 +157,22 @@ class ServerManager extends Actor {
   import net.lifthub.common.event.server._
   import net.lifthub.model.Project._
   def receive = {
-    case Start(projectId) => 
-      Project.find(By(Project.id, projectId)) match {
-        case Full(project) =>
-          val server = ServerInfo(project)
-          ServerManagerCore.start(server) match {
-            case Full(x) =>
-              project.status(Status.Running)
-              project.save
-              self.reply(Response.STARTED)
-              println("started " + projectId)
-            case Failure(x, _, _) =>
-              println(x)
-              self.reply(Response.FAILED)
-            case _ => unexpectedResult
-          }
-        case _ => projectNotFound(projectId)
-      }
-    case Stop(projectId) => 
-      Project.find(By(Project.id, projectId)) match {
-        case Full(project) =>
-          val server = ServerInfo(project)
-          ServerManagerCore.stop(server) match {
-            case Full(x) =>
-              project.status(Status.Stopped)
-              project.save
-              self.reply(Response.STOPPED)
-            case Failure(x, _, _) =>
-              println(x)
-              self.reply(Response.FAILED)
-            case _ => unexpectedResult
-          }
-        case _ => projectNotFound(projectId)
-      }
-    case Clean(projectId) => 
-      Project.find(By(Project.id, projectId)) match {
-        case Full(project) =>
-          val server = ServerInfo(project)
-          ServerManagerCore.clean(server) match {
-            case Full(x) =>
-              self.reply(Response.CLEANED_UP)
-            case Failure(x, _, _) =>
-              println(x)
-              self.reply(Response.FAILED)
-            case _ => unexpectedResult
-          }
-        case _ => projectNotFound(projectId)
-      }
-    case _ => log.slf4j.info("error")
-  }
-  def projectNotFound(projectId: Long) = {
-    //TODO ERROR  
-    self.reply(Response.FAILED)
-    println("failed to start " + projectId)
-  }
-  def unexpectedResult = {
-    println("unknown error...")
-    self.reply(Response.FAILED)
+    case Start(projectName) => 
+      self.reply(ResStart(
+	ServerManagerCore.start(projectName, TIMEOUT)))
+    case Stop(projectName) => 
+      self.reply(ResStop(
+	ServerManagerCore.stop(projectName, TIMEOUT)))
+    case Clean(projectName) => 
+      self.reply(ResClean(
+	ServerManagerCore.clean(projectName)))
+    case Create(projectName, ipAddr) =>
+      self.reply(ResCreate(
+	RuntimeEnvironmentHelper.create(projectName, ipAddr)))
+    case Delete(projectName) =>
+      self.reply(ResDelete(
+	RuntimeEnvironmentHelper.delete(projectName)))
+    case _ => log.slf4j.info("unknown message")
   }
 }
 
@@ -155,7 +190,7 @@ object ServerManagerRunner {
       Actor.remote.register(x.name, actorOf[ServerManager])
     } getOrElse {
       //TODO
-      print("couldn't get the config values for GitRepoManager.")
+      print("couldn't get the config values for ServerManager.")
     }
   }
 

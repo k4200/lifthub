@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# This script starts/stops the Lifthub Management App.
+#
 
 usage() {
   echo "$0 <start|stop>"
@@ -11,7 +14,6 @@ then
 fi
 
 
-# Server's root dir (in a jail).
 SERVER_ROOT=/home/lifthub/server/jetty-6
 #STOP_PORT=$3
 STOP_PORT=8100
@@ -23,6 +25,7 @@ cd $SERVER_ROOT
 case "$1" in
   start)
     echo "starting..."
+    # Needed for Gitosis, but now it's probably useless.
     export GIT_SSH=ssh
     java -DSTOP.PORT=$STOP_PORT -DSTOP.KEY=$NAME -jar start.jar etc/jetty.xml &
     ;;

@@ -1,6 +1,7 @@
 package net.lifthub {
 package lib {
 
+import scala.util.control.Exception._
 
 //import net.liftweb.mapper.{DriverType,MySqlDriver, ConnectionIdentifier, DB}
 import net.liftweb.mapper._
@@ -27,8 +28,8 @@ abstract class DbHelper[T <: DriverType](driverType: T) {
   def getDriverType(): T = driverType
 
   // Abstract methods
-  def addDatabase(database: UserDatabase): Box[AnyRef]
-  def dropDatabase(database: UserDatabase): Box[AnyRef]
+  def addDatabase(database: UserDatabase): Box[String]
+  def dropDatabase(database: UserDatabase): Box[String]
 
   val dbnamePattern = "^\\w[\\w\\d]*$".r
   /**
@@ -46,8 +47,9 @@ abstract class DbHelper[T <: DriverType](driverType: T) {
     }
   }
 
-  def runUpdate(query: String): Box[Int] = {
-    tryo { DB.runUpdate(query, Nil, connectionIdentifier) }
+  def runUpdate(query: String): Int = {
+    println(query) //Debug
+    DB.runUpdate(query, Nil, connectionIdentifier)
   }
 
   def connectionIdentifier: ConnectionIdentifier
@@ -74,38 +76,44 @@ object MySqlHelper extends DbHelper[DriverType](MySqlDriver) {
   }
   override def connectionIdentifier = UserDbMySqlIdentifier
 
-  def addDatabase(database: UserDatabase): Box[AnyRef] = {
+  def addDatabase(database: UserDatabase): Box[String] = {
     if(database.validate != Nil) {
       return Failure(S.??("error.dbhelper.invalid"))
     }
-    //TODO ugly... don't know how to write this.
-    (for {
-      password <- database.plainPassword
-      _ <- runUpdate("CREATE DATABASE " + database.name)
-      _ <- runUpdate("CREATE USER '%s'@'%s' IDENTIFIED BY '%s'"
-                     .format(database.username, database.hostname, password))
-      _ <- runUpdate("GRANT ALL on %s.* to '%s'@'%s'"
-                     .format(database.name, database.username, database.hostname))
-    } yield "Database %s added successfully".format(database.name)) match {
-      case ok: Full[_] => ok
-      case ng => {
-        tryo { dropDatabase(database) }
-        ng
-      }
+    database.plainPassword match {
+      case Full(password) =>
+        allCatch either {
+          runUpdate("CREATE DATABASE " + database.name)
+          //TODO it would be better to limit the source host, but too much hassle.
+          runUpdate("CREATE USER '%s'@'%%' IDENTIFIED BY '%s'"
+                     .format(database.username, password))
+          runUpdate("GRANT ALL on %s.* to '%s'@'%%'"
+                     .format(database.name, database.username))
+        } match {
+          case Right(_) =>
+            Full("Database %s added successfully".format(database.name))
+          case Left(t) =>
+            t.printStackTrace
+            tryo { dropDatabase(database) }
+            Failure("Failed to add database %s.".format(database.name),
+                    Full(t), Empty)
+        }
+      case _ => Failure("password is not set.")
     }
   }
 
   /**
    * @return Full(message) if success, otherwise Failure
    */
-  def dropDatabase(database: UserDatabase): Box[AnyRef] = {
+  def dropDatabase(database: UserDatabase): Box[String] = {
     if(database.validate != Nil) {
       return Failure(S.??("error.dbhelper.invalid"))
     }
-    for {
-      _ <- runUpdate("DROP DATABASE " + database.name)
-      _ <- runUpdate("DROP USER '%s'@'%s'".format(database.username, database.hostname))
-    } yield "drop database succeeded."
+    tryo {
+      runUpdate("DROP DATABASE " + database.name)
+      runUpdate("DROP USER '%s'@'%%'".format(database.username))
+      "Succeeded to drop database %s.".format(database.name)
+    }
   }
 
 }

@@ -22,31 +22,9 @@ import storage.file.{FileRepository, FileRepositoryBuilder}
 import transport.{Transport, RefSpec, RemoteConfig, URIish}
 
 
-case class ServerInfo(projectName: String, port: Int, version: String) {
-  //Paths
-  val JAIL_SETUP_PROG = Props.get("jailer.path.bin.setup") openOr
-    "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
-  //TODO should be JAILER_PARENT_DIR ?
-  val JAIL_PARENT_DIR = Props.get("jailer.path.jailroot") openOr
-    "/home/lifthubuser/chroot"
-  //TODO jetty-6
-  val JAILER_TEMPLATE_DIR = Props.get("") openOr
-    "/home/lifthubuser/servers/jetty-6/etc"
-
+case class ServerInfo(projectName: String, version: String = "6") {
+  import ServerInfo._
   val jailRootPath = JAIL_PARENT_DIR + "/" + projectName
-
-  val JAIL_SERVER_DIR = Props.get("jail.path.serverroot") openOr
-    "/home/lifthubuser/servers"
-  //TODO only jetty-6
-  //  "/home/lifthubuser/logs"
-  val JAIL_LOG_DIR = Props.get("jail.path.log") openOr
-    "/home/lifthubuser/servers/jetty-6/logs"
-  //TODO only jetty-6, not a constant
-  val JAIL_WEBAPP_DIR = Props.get("jail.path.webappdir") openOr
-    "/home/lifthubuser/servers/jetty-6/userwebapps/" + projectName
-  //TODO jetty-6
-  val JAIL_CONF_DIR = Props.get("jail.path.confdir") openOr
-    "/home/lifthubuser/servers/jetty-6/etc/lifthub"
 
   //TODO
   val serverName = "jetty"
@@ -55,73 +33,53 @@ case class ServerInfo(projectName: String, port: Int, version: String) {
   val deployDirPath = jailRootPath + JAIL_WEBAPP_DIR
   val confPath = jailRootPath + JAIL_CONF_DIR + "/" + projectName + ".xml"
 
+  //TODO Move this cuz it is the same for all the projects.
   val templatePath = jailRootPath + JAILER_TEMPLATE_DIR + "/jetty.xml.tmpl"
   val logDirPath = jailRootPath + JAIL_LOG_DIR
-  val executeLogPath = logDirPath + "/" + projectName + "-execute.log"
-
-  //val pidFilePath = jailRootPath + basePath + "/logs/" + projectName + ".pid"
-  val stopPort = port + 1000 //TODO
-
-  /**
-   * Sets up a new server runtime environment.
-   *
-   */
-  def setupNewServer = {
-    executeJailSetupProgram("create")
-    writeConfFile
-  }
-
-  def deleteServer = {
-    executeJailSetupProgram("delete")
-  }
-
-  /**
-   * Creates a config file for the application server.
-   * Currently, only jetty is supported.
-   * This must be called after the chroot is created.
-   */
-  def writeConfFile: Boolean = {
-    FileUtils.printToFile(confPath)(writer => {
-      writer.write(confString)
-    })
-  }
+  val executeLogPath = logDirPath + "/server-exec.log"
 
   def confString: String = {
     import scala.io.Source
     val tmpl = Source.fromFile(templatePath)
     val portPattern = "#port#".r
     val namePattern = "#name#".r
-    namePattern.replaceAllIn(
-      portPattern.replaceAllIn(tmpl.mkString, port.toString),
-      projectName)
-  }
-
-  /**
-   * Executes the jail setup program with sudo.
-   * @parameter cmd either "create" or "delete"
-   */
-  def executeJailSetupProgram(cmd: String) = {
-    //TODO Test this. this may throw an exception.
-    import org.apache.commons.exec._
-    val cmdLine = new CommandLine("sudo")
-    cmdLine.addArgument(JAIL_SETUP_PROG)
-    cmdLine.addArgument(cmd)
-    cmdLine.addArgument(projectName)
-
-    val executor = new DefaultExecutor
-    //executor.setWorkingDirectory(new File(JAIL_PARENT_DIR))
-    executor.execute(cmdLine)  // synchronous
+    namePattern.replaceAllIn(tmpl.mkString, projectName)
   }
 }
 
 object ServerInfo {
+  //Host names
+  val JAILER_HOST_EXTERNAL =
+    Props.get("jailer.hostname.external") openOr "ec2.lifthub.net"
+
+  //Paths
+  val JAIL_SETUP_PROG = Props.get("jailer.path.bin.setup") openOr
+    "/home/lifthub/sbin/setup-jail.sh" // requires root privilege
+  //TODO should be JAILER_PARENT_DIR ?
+  val JAIL_PARENT_DIR = Props.get("jailer.path.jailroot") openOr
+    "/home/jails"
+  //!! Spec change: 
+  val JAILER_TEMPLATE_DIR = Props.get("") openOr
+    "/home/lifthub/tmpl"
+
+  val JAIL_SERVER_DIR = Props.get("jail.path.serverroot") openOr
+    "/home/lifthubuser/server"
+  //  "/home/lifthubuser/logs"
+  val JAIL_LOG_DIR = Props.get("jail.path.log") openOr
+    "/home/lifthubuser/logs"
+  val JAIL_WEBAPP_DIR = Props.get("jail.path.webappdir") openOr
+    "/home/lifthubuser/webappdir"
+  val JAIL_CONF_DIR = Props.get("jail.path.confdir") openOr
+    "/home/lifthubuser/etc"
+
   def apply(project: Project): ServerInfo = {
-    this(project.name, project.port, "6")
+    this(project.name)
   }
 }
 
 // ------------------------------------------------
-case class NginxConf(projectName: String, port: Int) {
+case class NginxConf(projectName: String, ipAddr: String, port: Int = 8080) {
+  //TODO hard-coded
   val confPath = "/home/lifthub/nginx/conf.d/%s.conf".format(projectName)
   val logPath = "/home/lifthub/nginx/logs/%s.access.log".format(projectName)
 
@@ -131,24 +89,28 @@ case class NginxConf(projectName: String, port: Int) {
     })
   }
 
+  //TODO hard-coded
   def confString: String = {
     """    server {
       |        server_name %s.lifthub.net;
       |        access_log %s main;
       |        location / {
-      |            proxy_pass   http://127.0.0.1:%d/;
+      |            proxy_pass   http://%s:%d/;
       |        }
       |    }
       |"""
-      .stripMargin.format(projectName, logPath, port)
+      .stripMargin.format(projectName, logPath, ipAddr, port)
   }
 }
 object NginxConf {
   def apply(project: Project): NginxConf = {
-    this(project.name, project.port.is)
+    this(project.name, project.ipAddr)
   }
   def remove(project: Project): Boolean = {
-    val nginxConf = NginxConf(project.name, 0)
+    remove(project.name)
+  }
+  def remove(projectName: String): Boolean = {
+    val nginxConf = NginxConf(projectName, "", 0)
     new java.io.File(nginxConf.confPath).delete &&
     new java.io.File(nginxConf.logPath).delete
   }
@@ -177,7 +139,12 @@ case class ProjectInfo (name: String, projectTemplate: ProjectTemplate) {
 
   def sbtLogPath = path + "-sbt.log"
 
-  val gitRepoRemote: String = "gitosis@lifthub.net:" + name + ".git"
+  //TODO
+  val gitRepoRemote: String =
+    "%s:%s/%s.git".format(
+      (Props.get("git.url.root") openOr "gitorious@git.lifthub.net"),
+      name, name
+    )
 }
 object ProjectInfo {
   //Paths
@@ -216,7 +183,11 @@ object SbtHelper {
     runCommand(project, "package")
   }
 
+  // This is not an sbt command.
   def deploy(project: Project): Box[String] = {
+    import net.schmizz.sshj.SSHClient
+    import net.schmizz.sshj.xfer.FileSystemFile
+
     //TODO Hot deploy.
     val pi = ProjectInfo(project)
     val si = ServerInfo(project)
@@ -224,8 +195,16 @@ object SbtHelper {
       return Failure("war file doesn't exist. Build first.")
     }
     tryo {
-      CommonsFileUtils.copyFile(pi.warPath, si.deployDirPath + "/ROOT.war")
-      pi.warPath.delete
+      val ssh = new SSHClient()
+      ssh.loadKnownHosts()
+      ssh.connect(ServerInfo.JAILER_HOST_EXTERNAL)
+      ssh.authPublickey(System.getProperty("user.name")) //what is this?
+      ssh.useCompression()
+
+      ssh.newSCPFileTransfer().upload(
+        new FileSystemFile(pi.warPath), si.deployDirPath + "/ROOT.war");
+      //pi.warPath.delete
+      ssh.disconnect()
       Full("Project %s successfully deployed.".format(project.name))
     } openOr {
       Failure("Failed to deploy.")
@@ -293,11 +272,6 @@ object ProjectHelper {
     updateWorkspace(project)
   }
 
-  def createProject(projectInfo: ProjectInfo, user: User) = {
-    //addUserToGitosis(projectInfo, user)
-    copyTemplate(projectInfo)
-  }
-
   def deleteProject(projectInfo: ProjectInfo) = {
     CommonsFileUtils.deleteDirectory(projectInfo.path)
   }
@@ -305,8 +279,9 @@ object ProjectHelper {
   def updateWorkspace(project: Project): Box[String] = {
     tryo {
       val pi = ProjectInfo(project)
-      deleteProject(pi)
-      cloneProject(pi)
+      // deleteProject(pi)
+      // cloneProject(pi)
+      pullProject(project)
       "Updating workspace succeeded."
     }
   }
@@ -316,12 +291,10 @@ object ProjectHelper {
    * The changes need to be committed by using
    * <code>commitAndPushProject</code>.
    */
-  def copyTemplate(projectInfo: ProjectInfo): Boolean = {
-    try {
+  def copyTemplate(projectInfo: ProjectInfo): Box[String] = {
+    tryo {
       CommonsFileUtils.copyDirectory(projectInfo.templatePath, projectInfo.path)
-      true
-    } catch {
-      case e: java.io.IOException => false
+      "Copy template to %s succeeded.".format(projectInfo.path)
     }
   }
 
@@ -331,7 +304,7 @@ object ProjectHelper {
    * It actually does init, commit and push.
    */
   def commitAndPushProject(projectInfo: ProjectInfo,
-                           dryRun: Boolean = false): Boolean = {
+                           dryRun: Boolean = false): Box[String] = {
     val builder = new FileRepositoryBuilder()
     val projectRepo = 
       builder.setGitDir(projectInfo.path + "/" + Constants.DOT_GIT)
@@ -359,12 +332,9 @@ object ProjectHelper {
       git.push().setRefSpecs(refSpec).setDryRun(dryRun).setRemote(projectInfo.gitRepoRemote).call()
     } catch {
       case e: Exception  =>
-	//TODO
-        e.printStackTrace
-        println(e.getCause)
-        return false
+        return Failure("Failed to push?", Full(e), Empty)
     }
-    true
+    Full("succeeded to commit and push.")
   }
 
   //TODO Write test cases.
@@ -375,7 +345,7 @@ object ProjectHelper {
   }
 
   /**
-   * @deprecated
+   * TODO --force or something equivalent.
    */
   def pullProject(project: Project): Boolean = {
     val projectInfo = ProjectInfo(project)
@@ -403,12 +373,14 @@ object ProjectHelper {
   /**
    * Creates a properties file for db connection
    */
-  def createProps(projectInfo: ProjectInfo, dbInfo: UserDatabase): Boolean = {
+  def createProps(projectInfo: ProjectInfo, dbInfo: UserDatabase): Box[String] = {
     val propsFile = new File(projectInfo.propsPath)
     FileUtils.printToFile(propsFile)(writer => {
       writer.write(generatePropsString(dbInfo))
-    })
-    true
+    }) match {
+      case true => Full("Succeded to create a prop.")
+      case false => Failure("Failed to create a prop.")
+    }
   }
 
   /**

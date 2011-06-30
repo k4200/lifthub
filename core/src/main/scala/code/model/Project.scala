@@ -2,9 +2,11 @@ package net.lifthub {
 package model {
 
 import scala.xml.NodeSeq
+import scala.util.control.Exception._
 
 import net.liftweb._
 import util.{FieldError,FieldIdentifier,StringValidators}
+import util.Helpers._
 import util.BindHelpers._
 import common._
 import mapper._
@@ -15,11 +17,15 @@ import scala.xml.Text
 import net.lifthub.model._
 import net.lifthub.lib._
 import net.lifthub.client.GitRepoManagerClient
+import net.lifthub.client.ServerManagerClient
 
 object Project extends Project with LongKeyedMetaMapper[Project]
 with UserEditableCRUDify[Long, Project]
 with AggregateFunctions[Project]
 {
+  /**
+   * @deprecated not used
+   */
   object Status extends Enumeration {
     val Stopped = StatusVal("Stopped")
     val Starting = StatusVal("Starting")
@@ -38,18 +44,27 @@ with AggregateFunctions[Project]
   override def dbTableName = "projects"; // define the DB table name
 //  override def fieldOrder = List(name, dateOfBirth, url)
 
-  override def validation = List(checkNumberOfProjects, checkSshKey, checkSpecialNames)
+  override def validation = List(
+    checkNumberOfProjects, checkSshKey, checkSpecialNames,
+    createDatabaseIfNone
+  )
 
   override def beforeCreate = List(
-    checkNumberOfProjects,
-    setPort,
-    createDatabaseIfNone
+    setPort
   )
 
   override def beforeDelete = List(project => {
     import net.lifthub.client._
     println("Project.beforeDelete")
-    ServerManagerClient.stopServer(project)
+/*
+    ServerManagerClient.stopServer(project) match {
+      case Full(_) =>
+	// OK
+      case Failure(x, _, _) =>
+	//TODO Not FieldError. Check the source.
+        List(FieldError(Project.name, Text(x)))
+    }
+*/
   })
 
   private def checkNumberOfProjects(project: Project): List[FieldError] = {
@@ -88,8 +103,6 @@ with AggregateFunctions[Project]
     //TODO Temporary
     val ngNames = List("www", "skr", "git", "test", "mysql", "lifthub", "lifthub_test",
                        "information_schema", "basejail", "newjail")
-    println(ngNames)
-    println(project.name.is)
     if (ngNames.contains(project.name.is)) {
       List(FieldError(Project.name, Text(project.name + " can't be used.")))
     } else {
@@ -101,62 +114,98 @@ with AggregateFunctions[Project]
     project.port(getAvailablePort)
   }
 
-  private def createDatabaseIfNone(project: Project): Unit = {
+  //TODO This is called even when there were errors in precedent validations.
+  private def createDatabaseIfNone(project: Project): List[FieldError] = {
     User.currentUser match {
       case Full(user) =>
         if(project.database == 0) {
-          val dbInfo = UserDatabase.createFromProject(project)
-          dbInfo.userId(user.id)
-          dbInfo.save
-          project.database(dbInfo)
-          project.userId(user.id) //TODO should be set automatically.
+	  allCatch either {
+            val dbInfo = UserDatabase.createFromProject(project)
+            dbInfo.userId(user.id)
+            dbInfo.save
+            project.database(dbInfo)
+            project.userId(user.id) //TODO should be set automatically.
+	  } match {
+	    case Left(_) =>
+              println("failed to create a db.")
+              List(FieldError(Project.name,
+                              Text(S.??("failed to create a db."))))
+	    case Right(_) =>
+              Nil //OK
+          }
+        } else {
+          Nil //OK?
         }
       case _ =>
+        println("not logged in.")
         List(FieldError(Project.name,
                         Text(S.??("validation.general.require.login"))))
     }
   }
 
+  //
   override def afterCreate = List(project =>  {
-    (for(dbInfo <-project.database.obj;
-    user <- User.find(By(User.id, project.userId)))
+    val projectInfo = ProjectInfo(project)
+
+    (for(dbInfo <- project.database.obj;
+         user <- User.find(By(User.id, project.userId)))
     yield {
-      val projectInfo = ProjectInfo(project)
-      ProjectHelper.copyTemplate(projectInfo)
-      ProjectHelper.createProps(projectInfo, dbInfo)
-      ProjectHelper.commitAndPushProject(projectInfo)
+      //Create a runtime environment
+      ServerManagerClient.create(project)
 
       // Copy the jail template and create a config file for jetty.
-      //TODO Move 
-      val serverInfo = ServerInfo(project)
-      serverInfo.setupNewServer
-
-      // nginx
-      //TODO Move 
-      val nginxConf = NginxConf(project)
-      nginxConf.writeToFile
+      // It'll be done by flavour, so not neccesary anymore.
+      //val serverInfo = ServerInfo(project)
+      //serverInfo.setupNewServer
     }) getOrElse {
-      println("error...") //TODO rollback
+      //TODO rollback
+      Failure("db or user is empty?")
     }
   })
 
-  // 
-  override def afterSave = List(project => {
-    //
+  private def addProjectToRepo(projectInfo: ProjectInfo, dbInfo: UserDatabase): Box[String] = {
+    (for {_ <- ProjectHelper.copyTemplate(projectInfo)
+          _ <- ProjectHelper.createProps(projectInfo, dbInfo)
+          _ <- ProjectHelper.commitAndPushProject(projectInfo)}
+     yield {
+       "success"
+     })
+  }
+
+  // afterSave is called after 'afterCreate' or 'afterUpdate'.
+  override def afterSave = List(project =>  {
+    import net.lifthub.client.ServerManagerClient
+    val projectInfo = ProjectInfo(project)
+
+    // If there's no gitorious project yet, create one.
     if (project.gitoriousProjectId.is == 0) {
-      for(user <- User.find(By(User.id, project.userId));
-	  id <- GitRepoManagerClient.addProject(user, project))
+      (for {
+        dbInfo <- project.database.obj;
+        user <- User.find(By(User.id, project.userId))
+
+        // Create a git repo.
+        id <- GitRepoManagerClient.addProject(user, project);
+        _ <- tryo {
+          project.gitoriousProjectId(id)
+          project.save
+        }
+        // Add a project to the repo that has just been created.
+        _ <- addProjectToRepo(projectInfo, dbInfo)
+      }
       yield {
-        project.gitoriousProjectId(id)
-        project.save
-        //
-        //GitRepoManagerClient.addSshKey(user, adminSshKey)
+        "afterCreate succeded."
+      }) match {
+        case Failure(msg, box, _) =>
+          println(msg)
+          box.map(t => t.printStackTrace)
+        case _ => // do nothing
       }
     }
   })
 
+
   override def afterDelete = List(project => {
-    println("afterDelete")
+    println("afterDelete") //Debug
 
     // Drop the database unless there are other projects
     // that use the same database,
@@ -165,26 +214,27 @@ with AggregateFunctions[Project]
       Project.find(By(Project.database, database.id)) match {
         case Empty =>
           if(!"test".equals(System.getProperty("run.mode"))) {  
-            database.dropDatabase
+            allCatch {
+	      database.dropDatabase
+	    }
 	  }
           database.delete_!
         case _ => println("This database is used by other projects.")
       }
     }
 
+    // Delete the runtime environment.
+    ServerManagerClient.delete(project)
+
+    // Delete the server environment.
+    //val si = ServerInfo(project)
+    //si.deleteServer
+
     // Remove the project from the git repo.
     GitRepoManagerClient.removeProject(project)
 
-
-    // Delete the server environment.
-    val si = ServerInfo(project)
-    si.deleteServer
-
     // Remove the project files.
     ProjectHelper.deleteProject(project.info)
-
-    // Delete the nginx conf file.
-    NginxConf.remove(project)
   })
 
   private[model] def getAvailablePort: Int = {
@@ -227,9 +277,16 @@ with UserEditableKeyedMapper[Long, Project]
     )
   }
 
+  def ipAddr: String = {
+    val portHex = "%04x".format(port.is)
+    "127.0." + portHex.substring(0,2) + "." + portHex.substring(2)
+  }
+
   /**
    * Port number on which the server (currently jetty) runs.
    * 9000-9999 are used for now.
+   * Now, it's used to generate IP address.
+   * TODO should retire this.
    */
   object port extends MappedInt(this) {
     /**

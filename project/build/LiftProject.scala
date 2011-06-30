@@ -30,7 +30,11 @@ with AkkaProject {
     //"org.eclipse.jgit" % "org.eclipse.jgit" % "0.10.1" withJavadoc,
     "org.eclipse.jgit" % "org.eclipse.jgit" % "0.12.1",
     "commons-lang" % "commons-lang" % "2.5",
-    "org.apache.commons" % "commons-exec" % "1.1"
+    "org.apache.commons" % "commons-exec" % "1.1",
+    // For ssh
+    "net.schmizz" % "sshj" % "0.4.1",
+    "org.bouncycastle" % "bcprov-jdk16" % "1.46",
+    "com.jcraft" % "jzlib" % "1.0.7"
     //"org.apache.commons" % "commons-exec" % "1.1"
     //"org.scala-tools.sbt" % "sbt-launch" % "0.7.2" // doesn't work with 2.8
     // https://github.com/harrah/process
