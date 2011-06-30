@@ -279,8 +279,9 @@ object ProjectHelper {
   def updateWorkspace(project: Project): Box[String] = {
     tryo {
       val pi = ProjectInfo(project)
-      deleteProject(pi)
-      cloneProject(pi)
+      // deleteProject(pi)
+      // cloneProject(pi)
+      pullProject(project)
       "Updating workspace succeeded."
     }
   }
@@ -344,7 +345,7 @@ object ProjectHelper {
   }
 
   /**
-   * @deprecated
+   * TODO --force or something equivalent.
    */
   def pullProject(project: Project): Boolean = {
     val projectInfo = ProjectInfo(project)
