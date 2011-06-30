@@ -15,6 +15,7 @@ import Helpers._
 import _root_.java.util.Date
 
 import net.lifthub.model.Project
+import net.lifthub.model.Project._
 import net.lifthub.lib._
 import net.lifthub.client._
 
@@ -35,7 +36,6 @@ class ProjectOperations {
   }
   
   def processButton(p: Project): NodeSeq = {
-    import net.lifthub.model.Project._
     if (p.status == Status.Stopped) {
       SHtml.ajaxButton(Text("Start"), () => start(p))
     } else if (p.status == Status.Running) {
@@ -92,15 +92,19 @@ class ProjectOperations {
   }
 
   def start(project: Project): JsCmd = {
+    //TODO in case of error
+    project.status(Status.Starting).save
     execute(project, "start", ServerManagerClient.startServer)
-    changeButton(project) &
-    showLog(project.server.executeLogPath)
+    project.status(Status.Running).save
+    changeButton(project)
   }
 
   def stop(project: Project): JsCmd = {
+    //TODO in case of error
+    project.status(Status.Stopping).save
     execute(project, "stop", ServerManagerClient.stopServer)
-    changeButton(project) &
-    showLog(project.server.executeLogPath)
+    project.status(Status.Stopped).save
+    changeButton(project)
   }
 
   def clean(project: Project): JsCmd = {
