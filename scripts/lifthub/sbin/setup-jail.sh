@@ -56,6 +56,10 @@ case "$1" in
     #
     /usr/opt/etc/rc.d/ezjail.sh start $NAME
 
+    # Set up config files.
+    cp -a /etc/resolv.conf $JAIL_ROOT/$NAME/etc
+    echo "$IPADDR $NAME" >> $JAIL_ROOT/$NAME/etc/hosts
+
     ;;
   delete)
     ezjail-admin stop $NAME
