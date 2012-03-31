@@ -1,9 +1,10 @@
-# I don't remember how I input Japanese characters in Emacs...
-Is this text visible to the public? Anyway, it's not really a secret.
-
-I'm writing this text on the server with Emacs in a terminal connecting from my Windows PC. I use ATOK on my Windows PC and wanted to send Japanese characters from the client to the server, but couldn't. I know I need to add a few lines or so to my .emacs, but too much hassle... That's why I'm writing this in English.
-
 # Overview
+
+I was going to create a PaaS that would host projects made with Lift web framework.
+At first, it was a private repository on GitHub, but I made it public since 
+I became too busy to keep on developping it.
+
+I hope this will be of some interest of some people. Any comments/feedback would be appreciated.
 
 See [the slides](http://www.slideshare.net/k4200/lifthub-rpscala26) on SlideShare.
 
